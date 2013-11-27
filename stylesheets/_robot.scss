@@ -1,1 +1,17 @@
 /* _robot.scss */
+.sim-robot {
+	position: absolute;
+	box-sizing: border-box;
+
+	background: blue;
+
+	&::before {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		content: '^';
+		text-align: center;
+		color: #fff;
+	}
+}

@@ -1,4 +1,17 @@
 /* _robot.scss */
+.sim-robot {
+  position: absolute;
+  box-sizing: border-box;
+  background: blue; }
+  .sim-robot::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    content: '^';
+    text-align: center;
+    color: #fff; }
+
 #playingField {
   position: absolute;
   top: 10px;

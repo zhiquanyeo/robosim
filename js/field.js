@@ -70,6 +70,16 @@ function () {
 		_simFieldDomElement.classList.add('sim-field');
 		_fieldDomElement.appendChild(_simFieldDomElement);
 
+		//Array of items on the field
+		// {
+		//		type: FieldItemType,
+		//		item: <object>
+		// }
+		var _fieldItems = [];
+
+		//Store the px per logical unit measurement
+		var _pxPerLogicalUnit = 0;
+
 		//The properties
 		Object.defineProperty(this, 'units', {
 			set: function(units) {
@@ -93,27 +103,63 @@ function () {
 			set: function (dimensions) {
 				_fieldDimensions = dimensions;
 				_doFieldResize(_fieldDomElement, _simFieldDomElement, _fieldDimensions);
-
+				_pxPerLogicalUnit = _simFieldDomElement.clientWidth / _fieldDimensions.width;
 			}
 		});
 
 		//Constructor type stuff
 		if (fieldDimensions !== undefined) {
-			this.fieldDimensions = fieldDimensions;
+			this.dimensions = fieldDimensions;
 		}
 		else {
-			this.fieldDimensions = {
+			this.dimensions = {
 				width: 100,
 				height: 100
 			};
 		}
 
 		if (fieldUnits !== undefined) {
-			this.fieldUnits = fieldUnits;
+			this.units = fieldUnits;
 		}
 
-		/* Accessors/Setters */
-		
+		//Item adding
+		this.addItem = function (item, type) {
+			//must make sure we don't already have this object
+			for (var i = 0, len = _fieldItems.length; i < len; i++) {
+				var currItem = _fieldItems[i];
+				if (currItem.item === item) {
+					console.warn('Item already exists on field');
+					return;
+				}
+			}
+
+			_fieldItems.push({
+				type: type,
+				item: item
+			});
+
+			//register the item with the field
+			if (item.registerWithField !== undefined) {
+				item.registerWithField(this);
+			}
+			else {
+				console.warn('item does not have appropriate registration method');
+			}
+
+			if (item.domElement !== undefined) {
+				_simFieldDomElement.appendChild(item.domElement);
+			}
+
+		}.bind(this);
+
+		this.getFieldDimensionInfo = function () {
+			return _calculateDimensions(_simFieldDomElement, _fieldDimensions);
+		};
+
+		//Given a logical measurement unit, convert to pixel measure
+		this.logicalToPixelOffset = function(input) {
+			return input * _pxPerLogicalUnit;
+		};
 
 		this.getFieldDimensionsPixels = function () {
 			return {
@@ -122,10 +168,16 @@ function () {
 			};
 		};
 
-		//TODO must maintain scaling!
-
 		this.forceRedraw = function () {
 			_doFieldResize(_fieldDomElement, _simFieldDomElement, _fieldDimensions);
+			_pxPerLogicalUnit = _simFieldDomElement.clientWidth / _fieldDimensions.width;
+			
+			for (var i = 0, len = _fieldItems.length; i < len; i++) {
+				var currItem = _fieldItems[i];
+				if (currItem.item && currItem.item.forceRedraw !== undefined) {
+					currItem.item.forceRedraw();
+				}
+			}
 		};
 
 		this.debugDump = function() {
@@ -150,6 +202,11 @@ function () {
 	Field.prototype.FieldUnits = {
 		FEET: 0,
 		METRES: 1
+	};
+
+	Field.prototype.FieldItemType = {
+		ROBOT: 0,
+		OBSTACLE: 1
 	};
 
 	return Field;
