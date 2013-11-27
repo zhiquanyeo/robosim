@@ -23,6 +23,5 @@ require.config({
 //Main App
 require(['app'],
 function(App) {
-	console.log('App', App);
 	App.start();
 });
