@@ -3,8 +3,11 @@ define([],
 function () {
 
 	function _redraw(elem, visualPositionInfo) {
-		elem.style.top = (visualPositionInfo.y - (visualPositionInfo.height / 2)) + 'px';
-		elem.style.left = (visualPositionInfo.x - (visualPositionInfo.width / 2)) + 'px';
+		var top = (visualPositionInfo.y - (visualPositionInfo.height / 2)) + 'px';
+		var left = (visualPositionInfo.x - (visualPositionInfo.width / 2)) + 'px';
+		
+		elem.style.webkitTransform = "translate(" + left + ", " + top + ") rotate(" + visualPositionInfo.bearing + "deg)";
+
 		elem.style.width = visualPositionInfo.width + 'px';
 		elem.style.height = visualPositionInfo.height + 'px';
 	}
@@ -27,6 +30,11 @@ function () {
 				height: 5
 			};
 		}
+
+		var _speed = 0; //in logical units
+		var _rotationalSpeed = 0; //in degrees per second
+
+		var _bearing = 0; //in degrees
 		
 
 		//Sensors need to provide correct interface
@@ -50,7 +58,8 @@ function () {
 						x: pxLeftOffset,
 						y: pxTopOffset,
 						width: pxWidth,
-						height: pxHeight
+						height: pxHeight,
+						bearing: _bearing
 					});
 				}
 			}
@@ -59,6 +68,24 @@ function () {
 		Object.defineProperty(this, 'size', {
 			get: function() {
 				return _size;
+			}
+		});
+
+		Object.defineProperty(this, 'speed', {
+			get: function() {
+				return _speed;
+			},
+			set: function(speed) {
+				_speed = speed;
+			}
+		});
+
+		Object.defineProperty(this, 'rotationalSpeed', {
+			get: function() {
+				return _rotationalSpeed;
+			},
+			set: function(rotSpeed) {
+				_rotationalSpeed = rotSpeed;
 			}
 		});
 
@@ -84,7 +111,8 @@ function () {
 					x: pxLeftOffset,
 					y: pxTopOffset,
 					width: pxWidth,
-					height: pxHeight
+					height: pxHeight,
+					bearing: _bearing
 				});
 			}
 		};
@@ -97,6 +125,35 @@ function () {
 			};
 		}.bind(this);
 
+		this.processTick = function(timeDelta) {
+			//timeDelta is how much time has elapsed between calls to tick (in ms)
+			var timeInSec = timeDelta / 1000;
+
+			//Adjust bearing
+			var currBearing = _bearing;
+			var newBearing = currBearing + (this.rotationalSpeed * timeInSec);
+			if (newBearing >= 360) {
+				newBearing -= 360;
+			}
+			else if (newBearing < 0) {
+				newBearing += 360;
+			}
+
+			_bearing = newBearing;
+
+			var currPos = this.position;
+			var distToMove = this.speed * timeInSec;
+
+			var hDist = Math.sin(_bearing/360 * 2 * Math.PI) * distToMove;
+			var vDist = Math.cos(_bearing/360 * 2 * Math.PI) * distToMove;
+
+			this.position = {
+				x: this.position.x + hDist,
+				y: this.position.y - vDist
+			};
+
+		}.bind(this);
+
 		this.forceRedraw = function() {
 			var pxTopOffset = _playingField.logicalToPixelOffset(this.position.y);
 			var pxLeftOffset = _playingField.logicalToPixelOffset(this.position.x);
@@ -107,7 +164,8 @@ function () {
 				x: pxLeftOffset,
 				y: pxTopOffset,
 				width: pxWidth,
-				height: pxHeight
+				height: pxHeight,
+				bearing: _bearing
 			});
 		}.bind(this);
 	}

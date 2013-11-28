@@ -1,3 +1,17 @@
+#mainLayout {
+  display: -webkit-flex;
+  -webkit-flex-flow: column;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px; }
+
+#playingField {
+  position: relative;
+  -webkit-flex: 1 1 auto;
+  min-height: auto; }
+
 /* _robot.scss */
 .sim-robot {
   position: absolute;
@@ -12,15 +26,8 @@
     text-align: center;
     color: #fff; }
 
-#playingField {
+.sim-field {
   position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 10px;
-  right: 10px;
-  box-sizing: border-box; }
-  #playingField > .sim-field {
-    position: absolute;
-    box-sizing: border-box;
-    border: 1px solid #000;
-    background: #efefef; }
+  box-sizing: border-box;
+  border: 1px solid #000;
+  background: #efefef; }

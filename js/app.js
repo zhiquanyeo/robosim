@@ -3,18 +3,15 @@ function($, _, Robot, Field) {
 
     return {
         start: function() {
+
+            var isRunning = false;
+            var timerToken;
             
             var robot = new Robot();
-            console.log('current Position: ', robot.position);
-
+            
             robot.setPositionXY(50, 50);
-            console.log('current Position: ', robot.position);
+            robot.rotationalSpeed = 12;
 
-            var robot2 = new Robot();
-            robot2.setPositionXY(25, 25);
-
-            console.log('Robot Positions: ', robot.position, robot2.position);
-        
             var theField = new Field(document.getElementById('playingField'), {
                 width: 200,
                 height: 100
@@ -29,21 +26,52 @@ function($, _, Robot, Field) {
             //Main App initialization
             theField.addItem(robot, theField.FieldItemType.ROBOT);
 
-            //expt
-            var counter = 0;
-            function moveTheRobot() {
-                robot.position = {
-                    x: robot.position.x,
-                    y: robot.position.y - 1
-                };
+            //Hook up the button listeners
+            var speedEntry = document.getElementById('txtSpeed');
+            var setSpeedBtn = document.getElementById('btnSetSpeed');
+            var forwardBtn = document.getElementById('btnForward');
+            var startStopBtn = document.getElementById('btnStartStop');
 
-                counter++;
-                if (counter < 30) {
-                    setTimeout(moveTheRobot, 250);
-                }
+            var lastTime;
+
+            function doTimerTick() {
+                var currTime = (new Date()).getTime();
+                var deltaTime = currTime - lastTime;
+                
+                robot.processTick(deltaTime);
+
+                lastTime = currTime;
             }
 
-            moveTheRobot();
+            startStopBtn.addEventListener('click', function() {
+                isRunning = !isRunning;
+
+                //What's the new state?
+                if (isRunning) {
+                    startStopBtn.textContent = "Stop";
+                    lastTime = (new Date()).getTime();
+                    timerToken = setInterval(doTimerTick.bind(this), 100);
+
+                }
+                else {
+                    startStopBtn.textContent = "Start";
+                    if (timerToken) {
+                        clearInterval(timerToken);
+                        timerToken = null;
+                    }
+                }
+            }.bind(this));
+
+            setSpeedBtn.addEventListener('click', function() {
+                var newSpeed = parseFloat(speedEntry.value);
+                if (!isNaN(newSpeed)) {
+                    robot.speed = newSpeed;
+                }
+                else {
+                    robot.speed = 0;
+                    speedEntry.value = 0;
+                }
+            });
         }
     };
 });

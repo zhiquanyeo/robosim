@@ -1,18 +1,8 @@
-#playingField {
+.sim-field {
 	position: absolute;
-	top: 10px;
-	bottom: 10px;
-	left: 10px;
-	right: 10px;
 
 	box-sizing: border-box;
-
-	& > .sim-field {
-		position: absolute;
-
-		box-sizing: border-box;
-		border: 1px solid #000;
-		background: #efefef;
-	}
+	border: 1px solid #000;
+	background: #efefef;
 }
 

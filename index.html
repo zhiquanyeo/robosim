@@ -5,9 +5,19 @@
 	<script data-main="js/main" src="js/libs/require.js"></script>
 </head>
 <body>
-	<div id="playingField">
-
+	<div id="mainLayout">
+		<div id="playingField"></div>
+		<div id="controlArea">
+			<label>Speed
+				<input type="text" id="txtSpeed" value="1.0"/>
+			</label>
+			<button id="btnSetSpeed">Set Speed</button>
+			<span style="width: 50px">&nbsp;</span>
+			<button id="btnStartStop">Start</button>
+			<button id="btnForward">Forward</button>
+		</div>
 	</div>
+	
 
 </body>
 </html>
