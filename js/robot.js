@@ -42,6 +42,9 @@ function () {
 
 		var _playingField = null;
 
+		//Event listeners
+		var _eventHandlers = {};
+
 		Object.defineProperty(this, 'position', {
 			get: function () {
 				return _position;
@@ -95,7 +98,30 @@ function () {
 			}
 		});
 
+		//This should only be used by sensors!
+		Object.defineProperty(this, 'bearing', {
+			get: function() {
+				return _bearing;
+			}
+		});
+
 		/* Accessors/Setters */
+
+		//Sensor Related functionality
+		this.addSensor = function (sensor, mountPoint) {
+			//We need to configure the sensor and attach it to the robot
+			var config = {
+				mountPoint: mountPoint,
+			};
+
+			if (_playingField) {
+				config.fieldDimensions = _playingField.dimensions;
+				config.playingField = _playingField;
+			}
+
+			sensor.attachToRobot(this);
+			sensor.configure(config);
+		}.bind(this);
 		
 		//Field related functionality
 		this.registerWithField = function (field) {
@@ -144,8 +170,8 @@ function () {
 			var currPos = this.position;
 			var distToMove = this.speed * timeInSec;
 
-			var hDist = Math.sin(_bearing/360 * 2 * Math.PI) * distToMove;
-			var vDist = Math.cos(_bearing/360 * 2 * Math.PI) * distToMove;
+			var hDist = Math.sin(_bearing/180 * Math.PI) * distToMove;
+			var vDist = Math.cos(_bearing/180 * Math.PI) * distToMove;
 
 			this.position = {
 				x: this.position.x + hDist,
@@ -168,7 +194,37 @@ function () {
 				bearing: _bearing
 			});
 		}.bind(this);
+
+		//Event handlers
+		this.addEventHandler = function(event, callback) {
+			var handlers = _eventHandlers[event];
+			if (!handlers) {
+				handlers = [];
+				_eventHandlers[event] = handlers;
+			}
+
+			handlers.push(callback);
+		};
+
+		// Utility function to fire the event
+		function _fireEvent (event, data) {
+			var handlers = _eventHandlers[event];
+			if (handlers) {
+				for (var i = 0, len = handlers.length; i < len; i++) {
+					var callback = handlers[i];
+					callback(data);
+				}
+			}
+		}
 	}
+
+	Robot.prototype.SensorMountPoint = {
+		CHASSIS: 0,
+		FRONT: 1,
+		RIGHT: 2,
+		BACK: 3,
+		LEFT: 4
+	};
 
 	return Robot;
 });

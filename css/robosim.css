@@ -16,15 +16,20 @@
 .sim-robot {
   position: absolute;
   box-sizing: border-box;
-  background: blue; }
+  background: url(../img/temp.gif) no-repeat center center;
+  background-size: contain; }
   .sim-robot::before {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    content: '^';
     text-align: center;
     color: #fff; }
+
+.sim-sensor-line {
+  position: absolute;
+  width: 1px;
+  background: red; }
 
 .sim-field {
   position: absolute;

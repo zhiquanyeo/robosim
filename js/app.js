@@ -1,5 +1,5 @@
-define(['jquery', 'underscore', 'robot', 'field'],
-function($, _, Robot, Field) {
+define(['jquery', 'underscore', 'robot', 'field', 'sensors/rangefinder'],
+function($, _, Robot, Field, RangeFinder) {
 
     return {
         start: function() {
@@ -7,10 +7,13 @@ function($, _, Robot, Field) {
             var isRunning = false;
             var timerToken;
             
-            var robot = new Robot();
+            var robot = new Robot({width:10,height:10});
             
             robot.setPositionXY(50, 50);
             robot.rotationalSpeed = 12;
+
+            //Set up the robot
+            
 
             var theField = new Field(document.getElementById('playingField'), {
                 width: 200,
@@ -25,6 +28,12 @@ function($, _, Robot, Field) {
 
             //Main App initialization
             theField.addItem(robot, theField.FieldItemType.ROBOT);
+
+            //TODO we need to make sure that when we are added to a field, 
+            //we should add sensors
+            // In the mean time, we add sensors AFTER we initialize the field
+            var frontRangeFinder = new RangeFinder();
+            robot.addSensor(frontRangeFinder, robot.SensorMountPoint.FRONT);
 
             //Hook up the button listeners
             var speedEntry = document.getElementById('txtSpeed');
@@ -41,6 +50,9 @@ function($, _, Robot, Field) {
                 robot.processTick(deltaTime);
 
                 lastTime = currTime;
+
+                //EXPT
+                console.log('Distance: ', frontRangeFinder.getValue());
             }
 
             startStopBtn.addEventListener('click', function() {
