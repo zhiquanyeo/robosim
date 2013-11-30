@@ -2,13 +2,15 @@
 <head>
 	<title>FIRST RoboSimulator</title>
 	<link rel="stylesheet" type="text/css" href="css/robosim.css" />
+	<script src="js/libs/ace/ace.js" type="text/javascript" charset="utf-8"></script>
 	<script data-main="js/main" src="js/libs/require.js"></script>
 </head>
 <body>
 	<div id="mainLayout">
 		<div id="playingField"></div>
+		<div id="horizontalSplitter"></div>
 		<div id="controlArea">
-			<label>Speed
+			<label style-"">Speed
 				<input type="text" id="txtSpeed" value="1.0"/>
 			</label>
 			<button id="btnSetSpeed">Set Speed</button>
@@ -16,6 +18,7 @@
 			<button id="btnStartStop">Start</button>
 			<button id="btnForward">Forward</button>
 		</div>
+		<div id="editorPane" style="height:300px"></div>
 	</div>
 	
 

@@ -15,5 +15,16 @@
 }
 
 #controlArea {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+#horizontalSplitter {
+	height: 4px;
+	background: #efefef;
+	cursor: ns-resize;
+}
+
+#editorPane {
 	
 }

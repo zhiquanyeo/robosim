@@ -121,6 +121,9 @@ function () {
 
 			sensor.attachToRobot(this);
 			sensor.configure(config);
+
+			_sensors.push(sensor);
+
 		}.bind(this);
 		
 		//Field related functionality
@@ -140,8 +143,28 @@ function () {
 					height: pxHeight,
 					bearing: _bearing
 				});
+
+				var sensorConfig = {
+					fieldDimensions: _playingField.dimensions,
+					playingField: _playingField
+				};
+
+				//We should also trigger a re-registration of sensors
+				for (var i = 0, len = _sensors.length; i < len; i++) {
+					var sensor = _sensors[i];
+					sensor.attachToRobot(this);
+
+					//reconfigure the playing field and dimensions
+					sensor.configure(sensorConfig);
+
+					if (sensor.forceRedraw) {
+						setTimeout(sensor.forceRedraw, 0);
+					}
+
+					console.log('sensor: ', sensor);
+				}
 			}
-		};
+		}.bind(this);
 
 		//Convenience function
 		this.setPositionXY = function (posX, posY) {
@@ -193,6 +216,14 @@ function () {
 				height: pxHeight,
 				bearing: _bearing
 			});
+
+			//Redraw sensor visuals if necessary
+			for (var i = 0, len = _sensors.length; i < len; i++) {
+				var sensor = _sensors[i];
+				if (sensor.forceRedraw) {
+					sensor.forceRedraw();
+				}
+			}
 		}.bind(this);
 
 		//Event handlers

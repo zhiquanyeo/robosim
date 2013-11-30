@@ -1,7 +1,7 @@
 define([],
 function() {
 	/*
-	All sensros MUST implement the following interface
+	All sensors MUST implement the following interface
 	
 	attachToRobot(robot)
 	configure(<json object>) - configure the sensor (config details depend on sensor)
@@ -23,6 +23,18 @@ function() {
 
 		var _visualElem = document.createElement('div');
 		_visualElem.classList.add('sim-sensor-line');
+
+		var _showVisual = false;
+
+		var _lastDistance = 0;
+
+		//Redraw visuals
+		this.forceRedraw = function () {
+			if (_robot && _showVisual) {
+				_visualElem.style.bottom = (_robot.domElement.clientHeight / 2) + 'px';
+				_visualElem.style.left = (_robot.domElement.clientWidth / 2) + 'px';
+			}
+		};
 
 		//Interface requirements
 		this.attachToRobot = function (robot) {
@@ -50,6 +62,10 @@ function() {
 			}
 			if (config.playingField) {
 				_field = config.playingField;
+			}
+
+			if (config.showVisual !== undefined) {
+				_showVisual = config.showVisual;
 			}
 		};
 
@@ -139,7 +155,10 @@ function() {
 			}
 
 			if (distance) {
-				_visualElem.style.height = _field.logicalToPixelOffset(distance) + 'px';
+				if (_showVisual)
+					_visualElem.style.height = _field.logicalToPixelOffset(distance) + 'px';
+				
+				_lastDistance = distance;
 			}
 			return distance;
 		};

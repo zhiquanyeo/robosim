@@ -12,6 +12,15 @@
   -webkit-flex: 1 1 auto;
   min-height: auto; }
 
+#controlArea {
+  user-select: none;
+  -webkit-user-select: none; }
+
+#horizontalSplitter {
+  height: 4px;
+  background: #efefef;
+  cursor: ns-resize; }
+
 /* _robot.scss */
 .sim-robot {
   position: absolute;

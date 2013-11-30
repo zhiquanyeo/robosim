@@ -1,5 +1,9 @@
-define(['jquery', 'underscore', 'robot', 'field', 'sensors/rangefinder'],
+define(['jquery', 'underscore', 
+    'robot', 'field', 'sensors/rangefinder'],
 function($, _, Robot, Field, RangeFinder) {
+
+    var mouseDown = false;
+    var lastY;
 
     return {
         start: function() {
@@ -13,7 +17,8 @@ function($, _, Robot, Field, RangeFinder) {
             robot.rotationalSpeed = 12;
 
             //Set up the robot
-            
+            var frontRangeFinder = new RangeFinder();
+            robot.addSensor(frontRangeFinder, robot.SensorMountPoint.FRONT);
 
             var theField = new Field(document.getElementById('playingField'), {
                 width: 200,
@@ -26,14 +31,40 @@ function($, _, Robot, Field, RangeFinder) {
                 theField.forceRedraw();
             }, 100));
 
+            //UI
+            var splitter = document.getElementById('horizontalSplitter');
+            var editorPane = document.getElementById('editorPane');
+
+            splitter.addEventListener('mousedown', function (e) {
+                mouseDown = true;
+                lastY = e.clientY;
+            });
+
+            window.addEventListener('mouseup', function (e) {
+                mouseDown = false;
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (!mouseDown) return;
+
+                var currY = e.clientY;
+                var delta = lastY - currY;
+
+                var height = parseInt(editorPane.style.height, 10);
+                height += delta;
+                editorPane.style.height = height + 'px';
+                lastY = currY;
+                theField.forceRedraw();
+            });
+
+            //Code Editor
+            var editor = ace.edit("editorPane");
+            //editor.setTheme("ace/theme/monokai");
+            editor.getSession().setMode("ace/mode/javascript");
+
+
             //Main App initialization
             theField.addItem(robot, theField.FieldItemType.ROBOT);
-
-            //TODO we need to make sure that when we are added to a field, 
-            //we should add sensors
-            // In the mean time, we add sensors AFTER we initialize the field
-            var frontRangeFinder = new RangeFinder();
-            robot.addSensor(frontRangeFinder, robot.SensorMountPoint.FRONT);
 
             //Hook up the button listeners
             var speedEntry = document.getElementById('txtSpeed');
