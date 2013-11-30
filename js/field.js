@@ -96,6 +96,13 @@ function () {
 			}
 		});
 
+		//THIS IS PRIVATE
+		Object.defineProperty(this, 'simFieldDomElement', {
+			get: function() {
+				return _simFieldDomElement;
+			}
+		});
+
 		Object.defineProperty(this, 'dimensions', {
 			get: function() {
 				return _fieldDimensions;

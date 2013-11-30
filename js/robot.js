@@ -1,6 +1,93 @@
 /* robot.js */
 define([],
 function () {
+	//TODO These Geom routines could go into a utility
+	function _getBoundingBox (position, dimensions, angle) {
+		//position.x/y, dimensions.width/height, angle in deg
+		var angleRad = angle / 180 * Math.PI;
+		var halfWidth = dimensions.width / 2;
+		var halfHeight = dimensions.height / 2;
+
+		var topLeft = {x: position.x - halfWidth, y: position.y - halfHeight};
+		var topRight = {x: position.x + halfWidth, y: position.y - halfHeight};
+		var bottomLeft = {x: position.x - halfWidth, y: position.y + halfHeight};
+		var bottomRight = {x: position.x + halfWidth, y: position.y + halfHeight};
+
+		var transTL = _translatePoint(topLeft, position, angleRad);
+		var transTR = _translatePoint(topRight, position, angleRad);
+		var transBL = _translatePoint(bottomLeft, position, angleRad);
+		var transBR = _translatePoint(bottomRight, position, angleRad);
+
+		var minMaxPoints = _findMinMaxPoints([transTL, transTR, transBL, transBR]);
+
+		//Return topLeft corner, and width+height, and an array of points
+		var boundingBox = {
+			x: minMaxPoints.minX,
+			y: minMaxPoints.minY,
+			width: minMaxPoints.maxX - minMaxPoints.minX,
+			height: minMaxPoints.maxY - minMaxPoints.minY,
+			points: {
+				topLeft: {
+					x: minMaxPoints.minX,
+					y: minMaxPoints.minY
+				},
+				topRight: {
+					x: minMaxPoints.maxX,
+					y: minMaxPoints.minY
+				},
+				bottomLeft: {
+					x: minMaxPoints.minX,
+					y: minMaxPoints.maxY
+				},
+				bottomRight: {
+					x: minMaxPoints.maxX,
+					y: minMaxPoints.maxY
+				}
+			}
+		};
+
+		return boundingBox;
+	}
+
+	function _translatePoint (point, rotPoint, angleRad) {
+		var transX = rotPoint.x + ((point.x - rotPoint.x) * Math.cos(angleRad)) +
+						((point.y - rotPoint.y) * Math.sin(angleRad));
+		var transY = rotPoint.y - ((point.x - rotPoint.x) * Math.sin(angleRad)) +
+						((point.y - rotPoint.y) * Math.cos(angleRad));
+		return {
+			x: transX,
+			y: transY
+		};
+	}
+
+	function _findMinMaxPoints (pointArray) {
+		var minX = Number.POSITIVE_INFINITY;
+		var minY = Number.POSITIVE_INFINITY;
+		var maxX = Number.NEGATIVE_INFINITY;
+		var maxY = Number.NEGATIVE_INFINITY;
+
+		var idxMinX, idxMinY, idxMaxX, idxMaxY;
+
+		for (var i = 0, len = pointArray.length; i < len; i++) {
+			var currPoint = pointArray[i];
+			if (currPoint.x < minX)
+				minX = currPoint.x;
+			if (currPoint.x > maxX)
+				maxX = currPoint.x;
+			if (currPoint.y < minY)
+				minY = currPoint.y;
+			if (currPoint.y > maxY)
+				maxY = currPoint.y;
+		}
+
+		var retValue = {
+			minX: minX,
+			maxX: maxX,
+			minY: minY,
+			maxY: maxY
+		};
+		return retValue;
+	}
 
 	function _redraw(elem, visualPositionInfo) {
 		var top = (visualPositionInfo.y - (visualPositionInfo.height / 2)) + 'px';
@@ -12,10 +99,30 @@ function () {
 		elem.style.height = visualPositionInfo.height + 'px';
 	}
 
+	function _redrawBoundingBox (elem, positionInfo) {
+		//x, y, width, height
+		var top = (positionInfo.y) + 'px';
+		var left = (positionInfo.x) + 'px';
+
+		elem.style.webkitTransform = "translate(" + left + ", " + top + ")";
+		
+		elem.style.width = positionInfo.width + 'px';
+		elem.style.height = positionInfo.height + 'px';
+	}
+
 	function Robot(size) {
 		/* Properties */
 		var _domElem = document.createElement('div');
 		_domElem.classList.add('sim-robot');
+
+		//Bounding box
+		var _boundingBoxElem = document.createElement('div');
+		_boundingBoxElem.classList.add('sim-robot-bounding-box');
+		//hidden by default
+		_boundingBoxElem.style.display = "none";
+		var _showBoundingBox = false;
+
+		var _boundingBox;
 
 		var _position = {
 			x: 0,
@@ -52,6 +159,10 @@ function () {
 			set: function (pos) {
 				_position = pos;
 				if (_playingField !== null) {
+					//TODO do collision detection
+					//generate bounding box
+					_boundingBox = _getBoundingBox(this.position, this.size, _bearing);
+					
 					var pxTopOffset = _playingField.logicalToPixelOffset(this.position.y);
 					var pxLeftOffset = _playingField.logicalToPixelOffset(this.position.x);
 					var pxWidth = _playingField.logicalToPixelOffset(this.size.width);
@@ -63,6 +174,18 @@ function () {
 						width: pxWidth,
 						height: pxHeight,
 						bearing: _bearing
+					});
+
+					var bbPxTop = _playingField.logicalToPixelOffset(_boundingBox.y);
+					var bbPxLeft = _playingField.logicalToPixelOffset(_boundingBox.x);
+					var bbPxWidth = _playingField.logicalToPixelOffset(_boundingBox.width);
+					var bbPxHeight = _playingField.logicalToPixelOffset(_boundingBox.height);
+
+					_redrawBoundingBox(_boundingBoxElem, {
+						x: bbPxLeft,
+						y: bbPxTop,
+						width: bbPxWidth,
+						height: bbPxHeight
 					});
 				}
 			}
@@ -105,6 +228,39 @@ function () {
 			}
 		});
 
+		//Bounding box display
+		Object.defineProperty(this, 'showBoundingBox', {
+			get: function() {
+				return _showBoundingBox;
+			},
+			set: function(val) {
+				if (val) {
+					_showBoundingBox = true;
+					_boundingBoxElem.style.display = null;
+
+					if (_playingField) {
+						_boundingBox = _getBoundingBox(this.position, this.size, _bearing);
+
+						var bbPxTop = _playingField.logicalToPixelOffset(_boundingBox.x);
+						var bbPxLeft = _playingField.logicalToPixelOffset(_boundingBox.y);
+						var bbPxWidth = _playingField.logicalToPixelOffset(_boundingBox.width);
+						var bbPxHeight = _playingField.logicalToPixelOffset(_boundingBox.height);
+
+						_redrawBoundingBox(_boundingBoxElem, {
+							x: bbPxLeft,
+							y: bbPxTop,
+							width: bbPxWidth,
+							height: bbPxHeight
+						});
+					}
+				}
+				else {
+					_showBoundingBox = false;
+					_boundingBoxElem.style.display = "none";
+				}
+			}
+		});
+
 		/* Accessors/Setters */
 
 		//Sensor Related functionality
@@ -144,6 +300,20 @@ function () {
 					bearing: _bearing
 				});
 
+				_boundingBox = _getBoundingBox(this.position, this.size, _bearing);
+
+				var bbPxTop = _playingField.logicalToPixelOffset(_boundingBox.x);
+				var bbPxLeft = _playingField.logicalToPixelOffset(_boundingBox.y);
+				var bbPxWidth = _playingField.logicalToPixelOffset(_boundingBox.width);
+				var bbPxHeight = _playingField.logicalToPixelOffset(_boundingBox.height);
+
+				_redrawBoundingBox(_boundingBoxElem, {
+					x: bbPxLeft,
+					y: bbPxTop,
+					width: bbPxWidth,
+					height: bbPxHeight
+				});
+
 				var sensorConfig = {
 					fieldDimensions: _playingField.dimensions,
 					playingField: _playingField
@@ -160,9 +330,11 @@ function () {
 					if (sensor.forceRedraw) {
 						setTimeout(sensor.forceRedraw, 0);
 					}
-
-					console.log('sensor: ', sensor);
 				}
+
+				//Set up the bounding box visual
+				//TODO This really should be another 'object' type for the field
+				field.simFieldDomElement.appendChild(_boundingBoxElem);
 			}
 		}.bind(this);
 
@@ -215,6 +387,19 @@ function () {
 				width: pxWidth,
 				height: pxHeight,
 				bearing: _bearing
+			});
+
+			_boundingBox = _getBoundingBox(this.position, this.size, _bearing);
+			var bbPxTop = _playingField.logicalToPixelOffset(_boundingBox.x);
+			var bbPxLeft = _playingField.logicalToPixelOffset(_boundingBox.y);
+			var bbPxWidth = _playingField.logicalToPixelOffset(_boundingBox.width);
+			var bbPxHeight = _playingField.logicalToPixelOffset(_boundingBox.height);
+
+			_redrawBoundingBox(_boundingBoxElem, {
+				x: bbPxLeft,
+				y: bbPxTop,
+				width: bbPxWidth,
+				height: bbPxHeight
 			});
 
 			//Redraw sensor visuals if necessary

@@ -1,4 +1,4 @@
-define(['jquery', 'underscore', 
+define(['jquery', 'underscore',
     'robot', 'field', 'sensors/rangefinder'],
 function($, _, Robot, Field, RangeFinder) {
 
@@ -31,6 +31,12 @@ function($, _, Robot, Field, RangeFinder) {
                 theField.forceRedraw();
             }, 100));
 
+            //Code Editor
+            var editor = ace.edit("editorPane");
+            //editor.setTheme("ace/theme/monokai");
+            editor.getSession().setMode("ace/mode/c_cpp");
+
+
             //UI
             var splitter = document.getElementById('horizontalSplitter');
             var editorPane = document.getElementById('editorPane');
@@ -54,13 +60,15 @@ function($, _, Robot, Field, RangeFinder) {
                 height += delta;
                 editorPane.style.height = height + 'px';
                 lastY = currY;
+
                 theField.forceRedraw();
+                editor.resize();
             });
 
-            //Code Editor
-            var editor = ace.edit("editorPane");
-            //editor.setTheme("ace/theme/monokai");
-            editor.getSession().setMode("ace/mode/javascript");
+            var boundingBoxCheckbox = document.getElementById('chkBoundingBox');
+            boundingBoxCheckbox.addEventListener('change', function() {
+                robot.showBoundingBox = boundingBoxCheckbox.checked;
+            });
 
 
             //Main App initialization
@@ -83,7 +91,7 @@ function($, _, Robot, Field, RangeFinder) {
                 lastTime = currTime;
 
                 //EXPT
-                console.log('Distance: ', frontRangeFinder.getValue());
+                //console.log('Distance: ', frontRangeFinder.getValue());
             }
 
             startStopBtn.addEventListener('click', function() {
