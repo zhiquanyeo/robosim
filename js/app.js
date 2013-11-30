@@ -24,6 +24,10 @@ function($, _, Robot, Field, RangeFinder) {
                 width: 200,
                 height: 100
             });
+
+            robot.addEventHandler('collision', function() {
+                console.log('Robot had a collision!');
+            });
             
             //Resize event handler
             window.addEventListener('resize', _.debounce(function() {

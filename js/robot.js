@@ -152,6 +152,9 @@ function () {
 		//Event listeners
 		var _eventHandlers = {};
 
+		// Collision event fired (we really only want to fire this once)
+		var _collisionEventFired = false;
+
 		Object.defineProperty(this, 'position', {
 			get: function () {
 				return _position;
@@ -159,10 +162,29 @@ function () {
 			set: function (pos) {
 				_position = pos;
 				if (_playingField !== null) {
-					//TODO do collision detection
-					//generate bounding box
+					//generate bounding box and do collision detection with the walls
 					_boundingBox = _getBoundingBox(this.position, this.size, _bearing);
-					
+					if (_boundingBox.x < 0 || _boundingBox.y < 0 ||
+						_boundingBox.x + _boundingBox.width > _playingField.width ||
+						_boundingBox.y + _boundingBox.height > _playingField.height) {
+						//collision!
+						this.rotationalSpeed = 0;
+						this.speed = 0;
+
+						if (!_collisionEventFired) {
+							_fireEvent('collision');
+							_collisionEventFired = true;
+						}
+
+						//TODO: We might need to set a limit so that our bounding
+						//box does not exceed field bounds
+					}
+					else {
+						//We passed the collision detection
+						//Set the eventFired flag to false
+						_collisionEventFired = false;
+					}
+
 					var pxTopOffset = _playingField.logicalToPixelOffset(this.position.y);
 					var pxLeftOffset = _playingField.logicalToPixelOffset(this.position.x);
 					var pxWidth = _playingField.logicalToPixelOffset(this.size.width);
