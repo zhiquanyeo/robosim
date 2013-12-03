@@ -165,8 +165,8 @@ function () {
 					//generate bounding box and do collision detection with the walls
 					_boundingBox = _getBoundingBox(this.position, this.size, _bearing);
 					if (_boundingBox.x < 0 || _boundingBox.y < 0 ||
-						_boundingBox.x + _boundingBox.width > _playingField.width ||
-						_boundingBox.y + _boundingBox.height > _playingField.height) {
+						_boundingBox.x + _boundingBox.width > _playingField.dimensions.width ||
+						_boundingBox.y + _boundingBox.height > _playingField.dimensions.height) {
 						//collision!
 						this.rotationalSpeed = 0;
 						this.speed = 0;
