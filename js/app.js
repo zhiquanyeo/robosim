@@ -1,6 +1,7 @@
 define(['jquery', 'underscore',
-    'robot', 'field', 'sensors/rangefinder'],
-function($, _, Robot, Field, RangeFinder) {
+    'robot', 'field', 'sensors/rangefinder',
+    'simulation'],
+function($, _, Robot, Field, RangeFinder, Simulation) {
 
     var mouseDown = false;
     var lastY;
@@ -84,38 +85,26 @@ function($, _, Robot, Field, RangeFinder) {
             var forwardBtn = document.getElementById('btnForward');
             var startStopBtn = document.getElementById('btnStartStop');
 
-            var lastTime;
+            //Simulation Setup
+            var simulation = new Simulation(theField, robot);
 
-            function doTimerTick() {
-                var currTime = (new Date()).getTime();
-                var deltaTime = currTime - lastTime;
-                
-                robot.processTick(deltaTime);
-
-                lastTime = currTime;
-
-                //EXPT
-                //console.log('Distance: ', frontRangeFinder.getValue());
-            }
-
-            startStopBtn.addEventListener('click', function() {
-                isRunning = !isRunning;
-
-                //What's the new state?
+            simulation.addEventHandler('runStateChanged', function(isRunning) {
                 if (isRunning) {
                     startStopBtn.textContent = "Stop";
-                    lastTime = (new Date()).getTime();
-                    timerToken = setInterval(doTimerTick.bind(this), 100);
-
                 }
                 else {
                     startStopBtn.textContent = "Start";
-                    if (timerToken) {
-                        clearInterval(timerToken);
-                        timerToken = null;
-                    }
                 }
-            }.bind(this));
+            });
+
+            startStopBtn.addEventListener('click', function() {
+                if (simulation.isRunning) {
+                    simulation.stop();
+                }
+                else {
+                    simulation.start();
+                }
+            });
 
             setSpeedBtn.addEventListener('click', function() {
                 var newSpeed = parseFloat(speedEntry.value);
