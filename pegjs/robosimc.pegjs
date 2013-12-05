@@ -175,24 +175,43 @@ Statement
 	/ JumpStatement 
 
 LabeledStatement
-	= Identifier COLON Statement
-	/ CASE ConstantExpression COLON Statement
-	/ DEFAULT COLON Statement
+	= ident:Identifier COLON stmt:Statement {
+		return AST.labeledStatement(ident, stmt, {line: line, col: column});
+	  }
+	/ CASE test:ConstantExpression COLON stmt:Statement {
+		return AST.switchCase(test, stmt, {line: line, col: column});
+	  }
+	/ DEFAULT COLON Statement {
+		return AST.switchCase(null, stmt, {line: line, col: column});
+	  }
 
 CompoundStatement
 	= LWING ( Declaration / Statement )* RWING
 
 ExpressionStatement
-	= Expression? SEMI
+	= expr:Expression? SEMI {
+		return AST.expressionStatement(expr, {line:line, col: column});
+	  }
 
 SelectionStatement
-	= IF LPAR Expression RPAR Statement (ELSE Statement)?
-	/ SWITCH LPAR Expression RPAR Statement
+	= IF LPAR test:Expression RPAR trueStmt:Statement elseStmt:(ELSE Statement)? {
+		return AST.ifStatement(test, trueStmt, elseStmt, {line:line, col: column});
+	  }
+	/ SWITCH LPAR test:Expression RPAR stmt:Statement {
+		/*TODO needs work*/
+		return AST.switchStatement(test, stmt, {line:line, col:column});
+	  }
 
 IterationStatement
-	= WHILE LPAR Expression RPAR Statement
-	/ DO Statement WHILE LPAR Expression RPAR SEMI
-	/ FOR LPAR Expression? SEMI Expression? SEMI Expression? RPAR Statement
+	= WHILE LPAR test:Expression RPAR body:Statement {
+		return AST.whileStatement(test, body, {line:line, col:column});
+	  }
+	/ DO body:Statement WHILE LPAR test:Expression RPAR SEMI {
+		return AST.doWhileStatement(body, test, {line:line, col:column});
+	  }
+	/ FOR LPAR init:Expression? SEMI test:Expression? SEMI update:Expression? RPAR body:Statement {
+		return AST.forStatement(init, test, update, body, {line:line, col:column});
+	  }
 	/ FOR LPAR Declaration Expression? SEMI Expression RPAR Statement
 
 JumpStatement
