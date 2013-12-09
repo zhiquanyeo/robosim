@@ -1,7 +1,8 @@
 define(['jquery', 'underscore',
     'robot', 'field', 'sensors/rangefinder',
-    'simulation', 'ast/ast', 'ast/parser'],
-function($, _, Robot, Field, RangeFinder, Simulation, AST, Parser) {
+    'simulation', 'ast/ast', 'ast/parser', 'robotprogram'],
+function($, _, Robot, Field, RangeFinder, 
+    Simulation, AST, Parser, RobotProgram) {
 
     var mouseDown = false;
     var lastY;
@@ -118,9 +119,9 @@ function($, _, Robot, Field, RangeFinder, Simulation, AST, Parser) {
             });
 
             forwardBtn.addEventListener('click', function() {
-                console.log(editor.getSession().getValue());
                 try {
                     var result = Parser.parse(editor.getSession().getValue());
+                    /*
                     console.log('result: ', result, result.loc);
                     console.log('program Statements');
                     for (var i in result.statements) {
@@ -130,6 +131,8 @@ function($, _, Robot, Field, RangeFinder, Simulation, AST, Parser) {
                         }
                         console.log('[' + i + ']', statement, statement.loc);
                     }
+                    */
+                    var robotProgram = new RobotProgram(result);
                 }
                 catch (e) {
                     console.warn(e);
