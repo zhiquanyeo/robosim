@@ -121,10 +121,14 @@ function($, _, Robot, Field, RangeFinder, Simulation, AST, Parser) {
                 console.log(editor.getSession().getValue());
                 try {
                     var result = Parser.parse(editor.getSession().getValue());
-                    console.log('result: ', result);
+                    console.log('result: ', result, result.loc);
                     console.log('program Statements');
                     for (var i in result.statements) {
-                        console.log('[' + i + ']', result.statements[i]);
+                        var statement = result.statements[i];
+                        for (var j in statement) {
+                            console.log('--', j);
+                        }
+                        console.log('[' + i + ']', statement, statement.loc);
                     }
                 }
                 catch (e) {
