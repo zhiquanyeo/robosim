@@ -1,548 +1,1409 @@
+start = __ program:Program __ { return program; }
+
+/* ===== A.1 Lexical Grammar ===== */
+
+SourceCharacter
+  = .
+
+WhiteSpace "whitespace"
+  = [\t\v\f \u00A0\uFEFF]
+
+LineTerminator
+  = [\n\r\u2028\u2029]
+
+LineTerminatorSequence "end of line"
+  = "\n"
+  / "\r\n"
+  / "\r"
+  / "\u2028" // line separator
+  / "\u2029" // paragraph separator
+
+Comment "comment"
+  = MultiLineComment
+  / SingleLineComment
+
+MultiLineComment
+  = "/*" (!"*/" SourceCharacter)* "*/"
+
+MultiLineCommentNoLineTerminator
+  = "/*" (!("*/" / LineTerminator) SourceCharacter)* "*/"
+
+SingleLineComment
+  = "//" (!LineTerminator SourceCharacter)*
+
+Identifier "identifier"
+  = !ReservedWord name:IdentifierName { 
+  		return name; 
+  	}
+
+IdentifierName "identifier"
+  = start:IdentifierStart parts:IdentifierPart* {
+      return start + parts.join("");
+    }
+
+IdentifierStart
+  = [a-zA-Z]
+  / "_"
+  / "\\" sequence:UnicodeEscapeSequence { return sequence; }
+
+IdentifierPart
+  = IdentifierStart
+  / [0-9]
+
+ReservedWord
+  = Keyword
+  / TypeSpecifier
+  / FutureReservedWord
+  / NullLiteral
+  / BooleanLiteral
+
+Keyword
+  = (
+        "break"
+      / "case"
+      / "catch"
+      / "continue"
+      / "debugger"
+      / "default"
+      / "delete"
+      / "do"
+      / "else"
+      / "finally"
+      / "for"
+      / "function"
+      / "if"
+      / "instanceof"
+      / "in"
+      / "new"
+      / "return"
+      / "switch"
+      / "this"
+      / "throw"
+      / "try"
+      / "typeof"
+      / "var"
+      / "void"
+      / "while"
+      / "with"
+    )
+    !IdentifierPart
+
+FutureReservedWord
+  = (
+        "class"
+      / "const"
+      / "enum"
+      / "export"
+      / "extends"
+      / "import"
+      / "super"
+    )
+    !IdentifierPart
+
 /*
- * RoboSimC
- * A simplified C-style language for RoboSim
-*/
+ * This rule contains an error in the specification: |RegularExpressionLiteral|
+ * is missing.
+ */
+Literal
+  = NullLiteral
+  / BooleanLiteral
+  / value:NumericLiteral {
+  		return AST.literal(value, "NumericLiteral", {line:line, column:column});
+      /*
+      return {
+        type:  "NumericLiteral",
+        value: value
+      };
+      */
+    }
+  / value:StringLiteral {
+  		return AST.literal(value, "StringLiteral", {line:line, column:column});
+  		/*
+      return {
+        type:  "StringLiteral",
+        value: value
+      };
+      */
+    }
 
-Program = tu:TranslationUnit { return tu; }
+NullLiteral
+  = NullToken { 
+  		return AST.literal(null, "NullLiteral", {line:line, column:column});
+  	//return { type: "NullLiteral" }; 
+  }
 
-//=========================================
-// External Definitions
-//=========================================
+BooleanLiteral
+  = TrueToken  { 
+  		return AST.literal(true, "BooleanLiteral", {line:line, column:column});
+  		//return { type: "BooleanLiteral", value: true  }; 
+  	}
+  / FalseToken { 
+  		return AST.literal(false, "BooleanLiteral", {line:line, column:column});
+  		//return { type: "BooleanLiteral", value: false }; 
+  	}
 
-TranslationUnit
-	= Spacing ed:ExternalDeclaration+ EOT {
-		return ed;
-	}
+NumericLiteral "number"
+  = literal:(HexIntegerLiteral / DecimalLiteral) !IdentifierStart {
+      return literal;
+    }
 
-ExternalDeclaration /* At some point, we should return something with an AST */
-	= func:FunctionDefinition { return { type: 'function', data: func }; } 
-	/ decl:Declaration { return { type: 'declaration', data: decl }; }
+DecimalLiteral
+  = parts:(DecimalIntegerLiteral "." DecimalDigits? ExponentPart?) {
+      return parseFloat(parts);
+    }
+  / parts:("." DecimalDigits ExponentPart?)     { return parseFloat(parts); }
+  / parts:(DecimalIntegerLiteral ExponentPart?) { return parseFloat(parts); }
 
-FunctionDefinition
-	= spec:DeclarationSpecifiers decl:Declarator list:DeclarationList? stat:CompoundStatement {
-		return {
-			specifiers: spec,
-			declarator: decl,
-			declarationList: list,
-			statement: stat
-		};
-	};
+DecimalIntegerLiteral
+  = "0" / NonZeroDigit DecimalDigits?
 
-DeclarationList 
-	= Declaration+
+DecimalDigits
+  = DecimalDigit+
 
-//=========================================
-// Declarations
-//=========================================
+DecimalDigit
+  = [0-9]
 
-Declaration 
-	= spec:DeclarationSpecifiers init:InitDeclaratorList? SEMI {
-		var r = {
-			specifiers: spec
-		};
-		if (init) r['initList'] = init;
-		return r;
-	};
+NonZeroDigit
+  = [1-9]
 
-DeclarationSpecifiers
-	= ( type:TypedefName
-		{
-			return type;
-		})
-	/ ( TypeSpecifier )+
+ExponentPart
+  = ExponentIndicator SignedInteger
 
-InitDeclaratorList
-	= head:InitDeclarator tail:(COMMA it:InitDeclarator { return it; } )* {
-		return [head].concat(tail); 
-	}
+ExponentIndicator
+  = [eE]
 
-InitDeclarator
-	= dec:Declarator init:(EQU init:Initializer { return init;} )? {
-		if (init)
-			dec.initializer = init;
-		return dec;
-	}
+SignedInteger
+  = [-+]? DecimalDigits
 
-/* Note, this is simplified from C, and has the added String type */
-TypeSpecifier
-	= ts:(VOID
-	/ CHAR
-	/ INT
-	/ DOUBLE
-	/ BOOL
-	/ COMPLEX /* ??? */
-	/ STRING /* NOT C Standard! */
-	) {
-		return {
-			type: 'TypeSpecifier',
-			value: ts
-		}
-	}
+HexIntegerLiteral
+  = "0" [xX] digits:HexDigit+ { return parseInt("0x" + digits); }
 
-SpecifierQualifierList
-	= ( type:TypedefName ) 
-	  {
-		return type;
-	  }
-	/ ( TypeSpecifier )+
+HexDigit
+  = [0-9a-fA-F]
 
-Declarator
-	= dec:DirectDeclarator { return dec; }
+StringLiteral "string"
+  = parts:('"' DoubleStringCharacters? '"' / "'" SingleStringCharacters? "'") {
+      return parts[1];
+    }
 
-DirectDeclarator
-	= what:( name:Identifier { return { type: 'Identifier', name: name}; }
-		/ LPAR dec:Declarator RPAR { return { type: 'Declarator', value: dec}; })
-	  how:(
-	  	LBRK exp:AssignmentExpression? RBRK { return {type:'array', dim:exp }; }
-	  / LPAR par:ParameterTypeList RPAR { return {type: 'params', params:par}; }
-	  / LPAR par:IdentifierList? RPAR { return {type: 'idents', params:par}; }
-	  )* {
-	  	var r = what;
-	  	if (how.length) r.how = how;
-	  	return r;
-	  }	
+DoubleStringCharacters
+  = chars:DoubleStringCharacter+ { return chars.join(""); }
 
-ParameterTypeList
-	= params:ParameterList varlist:(COMMA ELLIPSIS)? {
-		if (varlist) params.variable = true;
-		return params; /*Do we really need the varlist? */
-	}
+SingleStringCharacters
+  = chars:SingleStringCharacter+ { return chars.join(""); }
 
-ParameterList 
-	= head:ParameterDeclaration tail:(COMMA p:ParameterDeclaration { return p; } )* {
-		var r = [head];
-		if (tail) r = r.concat(tail);
-		return r;
-	}
+DoubleStringCharacter
+  = !('"' / "\\" / LineTerminator) char_:SourceCharacter { return char_;     }
+  / "\\" sequence:EscapeSequence                         { return sequence;  }
+  / LineContinuation
 
-ParameterDeclaration
-	= decs:DeclarationSpecifiers
-	  dec:( Declarator / AbstractDeclarator )? {
-	  	if (dec) decs.push(dec);
-	  	return decs;
-	  }
+SingleStringCharacter
+  = !("'" / "\\" / LineTerminator) char_:SourceCharacter { return char_;     }
+  / "\\" sequence:EscapeSequence                         { return sequence;  }
+  / LineContinuation
 
-IdentifierList
-	= header:Identifier tail:(COMMA Identifier)* {
-		var r = [head];
-		if (tail) r = r.concat(tail);
-		return r;
-	}
+LineContinuation
+  = "\\" sequence:LineTerminatorSequence { return sequence; }
 
-TypeName
-	= SpecifierQualifierList AbstractDeclarator?
+EscapeSequence
+  = CharacterEscapeSequence
+  / "0" !DecimalDigit { return "\0"; }
+  / HexEscapeSequence
+  / UnicodeEscapeSequence
 
-AbstractDeclarator
-	= DirectAbstractDeclarator
+CharacterEscapeSequence
+  = SingleEscapeCharacter
+  / NonEscapeCharacter
 
-DirectAbstractDeclarator
-	= ( LPAR AbstractDeclarator RPAR
-	  / LBRK AssignmentExpression? RBRK
-	  / LPAR ParameterTypeList? RPAR
-	  )
-	  ( LBRK AssignmentExpression? RBRK
-	  / LPAR ParameterTypeList? RPAR
-	  )*
+SingleEscapeCharacter
+  = char_:['"\\bfnrtv] {
+      return char_
+        .replace("b", "\b")
+        .replace("f", "\f")
+        .replace("n", "\n")
+        .replace("r", "\r")
+        .replace("t", "\t")
+        .replace("v", "\x0B") // IE does not recognize "\v".
+    }
 
-TypedefName
-	= id:Identifier { return {type: 'userTypesSpecifier', value: id}; }
+NonEscapeCharacter
+  = (!EscapeCharacter / LineTerminator) char_:SourceCharacter { return char_; }
 
-Initializer
-	= AssignmentExpression
-	/ LWING InitializerList COMMA? RWING
+EscapeCharacter
+  = SingleEscapeCharacter
+  / DecimalDigit
+  / "x"
+  / "u"
 
-InitializerList
-	= Designation? Initializer (COMMA Designation? Initializer)*
+HexEscapeSequence
+  = "x" digits:(HexDigit HexDigit) {
+      return String.fromCharCode(parseInt("0x" + digits));
+    }
 
-Designation
-	= Designator+ EQU
+UnicodeEscapeSequence
+  = "u" digits:(HexDigit HexDigit HexDigit HexDigit) {
+      return String.fromCharCode(parseInt("0x" + digits));
+    }
 
-Designator
-	= LBRK ConstantExpression RBRK
-	/ DOT Identifier
+/* Tokens */
 
+BreakToken      = "break"            !IdentifierPart
+CaseToken       = "case"             !IdentifierPart
+CatchToken      = "catch"            !IdentifierPart
+ContinueToken   = "continue"         !IdentifierPart
+DebuggerToken   = "debugger"         !IdentifierPart
+DefaultToken    = "default"          !IdentifierPart
+DeleteToken     = "delete"           !IdentifierPart { return "delete"; }
+DoToken         = "do"               !IdentifierPart
+ElseToken       = "else"             !IdentifierPart
+FalseToken      = "false"            !IdentifierPart
+FinallyToken    = "finally"          !IdentifierPart
+ForToken        = "for"              !IdentifierPart
+FunctionToken   = "function"         !IdentifierPart
+GetToken        = "get"              !IdentifierPart
+IfToken         = "if"               !IdentifierPart
+InstanceofToken = "instanceof"       !IdentifierPart { return "instanceof"; }
+InToken         = "in"               !IdentifierPart { return "in"; }
+NewToken        = "new"              !IdentifierPart
+NullToken       = "null"             !IdentifierPart
+ReturnToken     = "return"           !IdentifierPart
+SetToken        = "set"              !IdentifierPart
+SwitchToken     = "switch"           !IdentifierPart
+ThisToken       = "this"             !IdentifierPart
+ThrowToken      = "throw"            !IdentifierPart
+TrueToken       = "true"             !IdentifierPart
+TryToken        = "try"              !IdentifierPart
+TypeofToken     = "typeof"           !IdentifierPart { return "typeof"; }
+VarToken        = "var"              !IdentifierPart
+VoidToken       = "void"             !IdentifierPart { return "void"; }
+WhileToken      = "while"            !IdentifierPart
+WithToken       = "with"             !IdentifierPart
 
-//=====================================
-// Statements
-//=====================================
+/* Automatic Semicolon Insertion */
 
-Statement
-	= LabeledStatement
-	/ CompoundStatement
-	/ ExpressionStatement
-	/ SelectionStatement
-	/ IterationStatement
-	/ JumpStatement 
+EOS
+  = __ ";"
+  / _ LineTerminatorSequence
+  / _ &"}"
+  / __ EOF
 
-LabeledStatement
-	= ident:Identifier COLON stmt:Statement {
-		return AST.labeledStatement(ident, stmt, {line: line, col: column});
-	  }
-	/ CASE test:ConstantExpression COLON stmt:Statement {
-		return AST.switchCase(test, stmt, {line: line, col: column});
-	  }
-	/ DEFAULT COLON Statement {
-		return AST.switchCase(null, stmt, {line: line, col: column});
-	  }
+EOSNoLineTerminator
+  = _ ";"
+  / _ LineTerminatorSequence
+  / _ &"}"
+  / _ EOF
 
-CompoundStatement
-	= LWING ( Declaration / Statement )* RWING
+EOF
+  = !.
 
-ExpressionStatement
-	= expr:Expression? SEMI {
-		return AST.expressionStatement(expr, {line:line, col: column});
-	  }
+/* Whitespace */
 
-SelectionStatement
-	= IF LPAR test:Expression RPAR trueStmt:Statement elseStmt:(ELSE Statement)? {
-		return AST.ifStatement(test, trueStmt, elseStmt, {line:line, col: column});
-	  }
-	/ SWITCH LPAR test:Expression RPAR stmt:Statement {
-		/*TODO needs work*/
-		return AST.switchStatement(test, stmt, {line:line, col:column});
-	  }
+_
+  = (WhiteSpace / MultiLineCommentNoLineTerminator / SingleLineComment)*
 
-IterationStatement
-	= WHILE LPAR test:Expression RPAR body:Statement {
-		return AST.whileStatement(test, body, {line:line, col:column});
-	  }
-	/ DO body:Statement WHILE LPAR test:Expression RPAR SEMI {
-		return AST.doWhileStatement(body, test, {line:line, col:column});
-	  }
-	/ FOR LPAR init:Expression? SEMI test:Expression? SEMI update:Expression? RPAR body:Statement {
-		return AST.forStatement(init, test, update, body, {line:line, col:column});
-	  }
-	/ FOR LPAR Declaration Expression? SEMI Expression RPAR Statement
+__
+  = (WhiteSpace / LineTerminatorSequence / Comment)*
 
-JumpStatement
-	= CONTINUE SEMI
-	/ BREAK SEMI
-	/ RETURN Expression? SEMI
+/* ===== A.2 Number Conversions ===== */
 
+/*
+ * Rules from this section are either unused or merged into previous section of
+ * the grammar.
+ */
 
-//======================================
-// Expressions
-//======================================
+/* ===== A.3 Expressions ===== */
 
 PrimaryExpression
-	= Identifier
-	/ Constant
-	/ sl:StringLiteral { return sl; }
-	/ LPAR Expression RPAR
+  = name:Identifier { 
+  		return AST.identifier(name, {line:line, column:column});
+  		//return { type: "Variable", name: name }; 
+  	}
+  / Literal
+  / ArrayLiteral
+  / "(" __ expression:Expression __ ")" { return expression; }
+
+ArrayLiteral
+  = "[" __ elision:(Elision __)? "]" {
+  		return AST.literal(elision !== null ? elision[0] : [], "ArrayLiteral", {line:line, column:column});
+      /*
+      return {
+        type:     "ArrayLiteral",
+        elements: elision !== null ? elision[0] : []
+      };
+      */
+    }
+  / "[" __ elements:ElementList __ elision:("," __ (Elision __)?)? "]" {
+  		var elts = elements.concat((elision !== null && elision.length && elision[2] !== null) ? elision[2][0] : []);
+  		return AST.literal(elts, "ArrayLiteral", {line:line, column:column});
+  		/*
+      return {
+        type:     "ArrayLiteral",
+        elements: elements.concat((elision !== null && elision.length && elision[2] !== null) ? elision[2][0] : [])
+      };
+      */
+    }
+
+ElementList
+  = head:(
+      elision:(Elision __)? element:AssignmentExpression {
+      	return (elision !== null && elision.length ? elision[0] : []).concat(element);
+      }
+    )
+    tail:(
+      __ "," __ elision:(Elision __)? element:AssignmentExpression {
+      	return (elision !== null && elision.length ? elision[0] : []).concat(element);
+      }
+    )* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+        result = result.concat(tail[i]);
+      }
+      return result;
+    }
+
+Elision
+  = "," elision:(__ ",")* {
+  		var result = [null];
+      for (var i = 0; i < elision.length; i++) {
+        result.push(null);
+      }
+      return result;
+    }
+
+MemberExpression
+  = base:(
+        PrimaryExpression
+      / FunctionExpression
+    )
+    accessors:(
+        __ "[" __ name:Expression __ "]" { return name; }
+      / __ "." __ name:IdentifierName    { return name; }
+    )* {
+      var result = base;
+      for (var i = 0; i < accessors.length; i++) {
+      	result = AST.memberExpression(result, accessors[i], {line:line, column:column});
+      	/*
+        result = {
+          type: "PropertyAccess",
+          base: result,
+          name: accessors[i]
+        };
+        */
+      }
+      return result;
+    }
+
+NewExpression
+  = MemberExpression
+  /*
+  / NewToken __ constructor:NewExpression {
+      return {
+        type:        "NewOperator",
+        constructor: constructor,
+        arguments:   []
+      };
+    }
+    */
+
+CallExpression
+  = base:(
+      name:MemberExpression __ args:Arguments {
+      	return AST.callExpression(name, args, {line:line, column:column});
+      	/*
+        return {
+          type:      "FunctionCall",
+          name:      name,
+          arguments: args
+        };
+        */
+      }
+    )
+    argumentsOrAccessors:(
+        __ args:Arguments {
+          return {
+            type:      "FunctionCallArguments",
+            arguments: args
+          };
+        }
+      / __ "[" __ name:Expression __ "]" {
+          return {
+            type: "PropertyAccessProperty",
+            name: name
+          };
+        }
+      / __ "." __ name:IdentifierName {
+          return {
+            type: "PropertyAccessProperty",
+            name: name
+          };
+        }
+    )* {
+      var result = base;
+      for (var i = 0; i < argumentsOrAccessors.length; i++) {
+        switch (argumentsOrAccessors[i].type) {
+          case "FunctionCallArguments":
+          	result = AST.callExpression(result, argumentsOrAccessors[i].arguments, {line:line, column:column});
+          	/*
+            result = {
+              type:      "FunctionCall",
+              name:      result,
+              arguments: argumentsOrAccessors[i].arguments
+            };
+            */
+            break;
+          case "PropertyAccessProperty":
+          	result = AST.memberExpression(result, argumentsOrAccessors[i].name, {line:line, column:column});
+          	/*
+            result = {
+              type: "PropertyAccess",
+              base: result,
+              name: argumentsOrAccessors[i].name
+            };
+            */
+            break;
+          default:
+            throw new Error(
+              "Invalid expression type: " + argumentsOrAccessors[i].type
+            );
+        }
+      }
+      return result;
+    }
+
+Arguments
+  = "(" __ args:ArgumentList? __ ")" {
+    return args !== null ? args : [];
+  }
+
+ArgumentList
+  = head:AssignmentExpression tail:(__ "," __ AssignmentExpression)* {
+    var result = [head];
+    for (var i = 0; i < tail.length; i++) {
+      result.push(tail[i][3]);
+    }
+    return result;
+  }
+
+LeftHandSideExpression
+  = CallExpression
+  / NewExpression
 
 PostfixExpression
-	= pri:( PrimaryExpression
-	  / LPAR TypeName RPAR LWING InitializerList COMMA? RWING
-	  )
-	  tail:( LBRK Expression RBRK
-	  / LPAR ArgumentExpressionList? RPAR
-	  / DOT Identifier
-	  / INC
-	  / DEC
-	  )* {
-	  	return {
-	  		type: "PostFixExpression",
-	  		primary: pri,
-	  		tail: tail
-	  	};
-	}
+  = expression:LeftHandSideExpression _ operator:PostfixOperator {
+  		return AST.updateExpression(operator, expression, false, {line:line, column:column});
+  		/*
+      return {
+        type:       "PostfixExpression",
+        operator:   operator,
+        expression: expression
+      };
+      */
+    }
+  / LeftHandSideExpression
 
-ArgumentExpressionList
-	= AssignmentExpression (COMMA AssignmentExpression)*
+PostfixOperator
+  = "++"
+  / "--"
 
 UnaryExpression
-	= PostfixExpression
-	/ INC UnaryExpression
-	/ DEC UnaryExpression
-	/ UnaryOperator CastExpression
+  = PostfixExpression
+  / operator:UnaryOperator __ expression:UnaryExpression {
+  		if (operator === "++" || operator === "--") {
+  			return AST.updateExpression(operator, expression, true, {line:line, column:column});
+  		}
+  		else {
+  			return AST.unaryExpression(operator, expression, true, {line:line, column:column});
+  		}
+  		/*
+      return {
+        type:       "UnaryExpression",
+        operator:   operator,
+        expression: expression
+      };
+      */
+    }
 
 UnaryOperator
-	= AND
-	/ PLUS
-	/ MINUS
-	/ TILDE
-	/ BANG
-
-CastExpression
-	= (LPAR TypeName RPAR)* UnaryExpression
+  = "++"
+  / "--"
+  / "+"
+  / "-"
+  / "~"
+  /  "!"
 
 MultiplicativeExpression
-	= CastExpression ((STAR / DIV / MOD) CastExpression)*
+  = head:UnaryExpression
+    tail:(__ MultiplicativeOperator __ UnaryExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+MultiplicativeOperator
+  = operator:("*" / "/" / "%") !"=" { return operator; }
 
 AdditiveExpression
-	= MultiplicativeExpression ((PLUS / MINUS) MultiplicativeExpression)*
+  = head:MultiplicativeExpression
+    tail:(__ AdditiveOperator __ MultiplicativeExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+AdditiveOperator
+  = "+" !("+" / "=") { return "+"; }
+  / "-" !("-" / "=") { return "-"; }
 
 ShiftExpression
-	= AdditiveExpression ((LEFT / RIGHT) AdditiveExpression)*
+  = head:AdditiveExpression
+    tail:(__ ShiftOperator __ AdditiveExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+ShiftOperator
+  = "<<"
+  / ">>>"
+  / ">>"
 
 RelationalExpression
-	= ShiftExpression ((LE / GE / LT / GT) ShiftExpression)*
+  = head:ShiftExpression
+    tail:(__ RelationalOperator __ ShiftExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+RelationalOperator
+  = "<="
+  / ">="
+  / "<"
+  / ">"
+
+RelationalExpressionNoIn
+  = head:ShiftExpression
+    tail:(__ RelationalOperatorNoIn __ ShiftExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+RelationalOperatorNoIn
+  = "<="
+  / ">="
+  / "<"
+  / ">"
 
 EqualityExpression
-	= RelationalExpression ((EQUEQU / BANGEQU) RelationalExpression)*
+  = head:RelationalExpression
+    tail:(__ EqualityOperator __ RelationalExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
 
-ANDExpression
-	= EqualityExpression (AND EqualityExpression)*
+EqualityExpressionNoIn
+  = head:RelationalExpressionNoIn
+    tail:(__ EqualityOperator __ RelationalExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
 
-ExclusiveORExpression
-	= ANDExpression (HAT ANDExpression)*
+EqualityOperator
+  = "==="
+  / "!=="
+  / "=="
+  / "!="
 
-InclusiveORExpression
-	= ExclusiveORExpression (OR ExclusiveORExpression)*
+BitwiseANDExpression
+  = head:EqualityExpression
+    tail:(__ BitwiseANDOperator __ EqualityExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+BitwiseANDExpressionNoIn
+  = head:EqualityExpressionNoIn
+    tail:(__ BitwiseANDOperator __ EqualityExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+BitwiseANDOperator
+  = "&" !("&" / "=") { return "&"; }
+
+BitwiseXORExpression
+  = head:BitwiseANDExpression
+    tail:(__ BitwiseXOROperator __ BitwiseANDExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+BitwiseXORExpressionNoIn
+  = head:BitwiseANDExpressionNoIn
+    tail:(__ BitwiseXOROperator __ BitwiseANDExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+BitwiseXOROperator
+  = "^" !("^" / "=") { return "^"; }
+
+BitwiseORExpression
+  = head:BitwiseXORExpression
+    tail:(__ BitwiseOROperator __ BitwiseXORExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+BitwiseORExpressionNoIn
+  = head:BitwiseXORExpressionNoIn
+    tail:(__ BitwiseOROperator __ BitwiseXORExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+BitwiseOROperator
+  = "|" !("|" / "=") { return "|"; }
 
 LogicalANDExpression
-	= InclusiveORExpression (ANDAND InclusiveORExpression)*
+  = head:BitwiseORExpression
+    tail:(__ LogicalANDOperator __ BitwiseORExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+LogicalANDExpressionNoIn
+  = head:BitwiseORExpressionNoIn
+    tail:(__ LogicalANDOperator __ BitwiseORExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+LogicalANDOperator
+  = "&&" !"=" { return "&&"; }
 
 LogicalORExpression
-	= LogicalANDExpression (OROR LogicalANDExpression)*
+  = head:LogicalANDExpression
+    tail:(__ LogicalOROperator __ LogicalANDExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+LogicalORExpressionNoIn
+  = head:LogicalANDExpressionNoIn
+    tail:(__ LogicalOROperator __ LogicalANDExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
+
+LogicalOROperator
+  = "||" !"=" { return "||"; }
 
 ConditionalExpression
-	= LogicalORExpression (QUERY Expression COLON LogicalORExpression)*
+  = condition:LogicalORExpression __
+    "?" __ trueExpression:AssignmentExpression __
+    ":" __ falseExpression:AssignmentExpression {
+    	return AST.conditionalExpression(condition, trueExpression, falseExpression, {line:line, column:column});
+    	/*
+      return {
+        type:            "ConditionalExpression",
+        condition:       condition,
+        trueExpression:  trueExpression,
+        falseExpression: falseExpression
+      };
+      */
+    }
+  / LogicalORExpression
+
+ConditionalExpressionNoIn
+  = condition:LogicalORExpressionNoIn __
+    "?" __ trueExpression:AssignmentExpressionNoIn __
+    ":" __ falseExpression:AssignmentExpressionNoIn {
+    	return AST.conditionalExpression(condition, trueExpression, falseExpression, {line:line, column:column});
+    	/*
+      return {
+        type:            "ConditionalExpression",
+        condition:       condition,
+        trueExpression:  trueExpression,
+        falseExpression: falseExpression
+      };
+      */
+    }
+  / LogicalORExpressionNoIn
 
 AssignmentExpression
-	= UnaryExpression AssignmentOperator AssignmentExpression
-	/ ConditionalExpression
+  = left:LeftHandSideExpression __
+    operator:AssignmentOperator __
+    right:AssignmentExpression {
+    	return AST.assignmentExpression(operator, left, right, {line:line, column:column});
+    	/*
+      return {
+        type:     "AssignmentExpression",
+        operator: operator,
+        left:     left,
+        right:    right
+      };
+      */
+    }
+  / ConditionalExpression
+
+AssignmentExpressionNoIn
+  = left:LeftHandSideExpression __
+    operator:AssignmentOperator __
+    right:AssignmentExpressionNoIn {
+    	return AST.assignmentExpression(operator, left, right, {line:line, column:column});
+    	/*
+      return {
+        type:     "AssignmentExpression",
+        operator: operator,
+        left:     left,
+        right:    right
+      };
+      */
+    }
+  / ConditionalExpressionNoIn
 
 AssignmentOperator
-	= EQU
-	/ STAREQU
-	/ DIVEQU
-	/ MODEQU
-	/ PLUSEQU
-	/ MINUSEQU
-	/ LEFTEQU
-	/ RIGHTEQU
-	/ ANDEQU
-	/ HATEQU
-	/ OREQU
+  = "=" (!"=") { return "="; }
+  / "*="
+  / "/="
+  / "%="
+  / "+="
+  / "-="
+  / "<<="
+  / ">>="
+  / ">>>="
+  / "&="
+  / "^="
+  / "|="
 
-Expression 
-	= AssignmentExpression (COMMA AssignmentExpression)*
+Expression
+  = head:AssignmentExpression
+    tail:(__ "," __ AssignmentExpression)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+        	result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+        	/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
 
-ConstantExpression
-	= ConditionalExpression
+ExpressionNoIn
+  = head:AssignmentExpressionNoIn
+    tail:(__ "," __ AssignmentExpressionNoIn)* {
+      var result = head;
+      for (var i = 0; i < tail.length; i++) {
+      		result = AST.binaryExpression(tail[i][1], result, tail[i][3], {line:line, column:column});
+      		/*
+        result = {
+          type:     "BinaryExpression",
+          operator: tail[i][1],
+          left:     result,
+          right:    tail[i][3]
+        };
+        */
+      }
+      return result;
+    }
 
+/* ===== A.4 Statements ===== */
 
-//======================================================
-// Lexical Elements
-// Tokens are: Keyword, Identifier, Constant, StringLiteral, Punctuator
-// Tokens separated by spacing
-//======================================================
+/*
+ * The specification does not consider |FunctionDeclaration| and
+ * |FunctionExpression| as statements, but JavaScript implementations do and so
+ * are we. This syntax is actually used in the wild (e.g. by jQuery).
+ */
+Statement
+  = Block
+  / VariableStatement
+  / EmptyStatement
+  / ExpressionStatement
+  / IfStatement
+  / IterationStatement
+  / ContinueStatement
+  / BreakStatement
+  / ReturnStatement
+  / LabelledStatement
+  / SwitchStatement
+  / FunctionDeclaration
+  / FunctionExpression
 
-Spacing
-	= ( WhiteSpace
-	  / LongComment
-	  / LineComment
-	  )*
+Block
+  = "{" __ statements:(StatementList __)? "}" {
+      return {
+        type:       "Block",
+        statements: statements !== null ? statements[0] : []
+      };
+    }
 
-WhiteSpace = [ \n\r\t\u000B\u000c]
+StatementList
+  = head:Statement tail:(__ Statement)* {
+      var result = [head];
+      for (var i = 0; i < tail.length; i++) {
+        result.push(tail[i][1]);
+      }
+      return result;
+    }
 
-LongComment
-	= "/*" (!"*/" .)* "*/"
+VariableStatement
+  = type:(VarToken / TypeSpecifier) __ arrType:ArrayTypeSpecifier? __ declarations:VariableDeclarationList EOS {
+      	return AST.variableDeclaration(type, arrType ? true:false, declarations, {line:line, column:column});
+      	/*
+      return {
+        type:         "VariableStatement",
+        varType: type,
+        isArray: arrType ? true : false,
+        declarations: declarations
+      };
+      */
+    }
 
-LineComment
-	= "//" (!"\n" .)*
+TypeSpecifier 
+= "int"
+/"char"
+/"void"
+/"string"
+/"double"
 
+VariableDeclarationList
+  = head:VariableDeclaration tail:(__ "," __ VariableDeclaration)* {
+      var result = [head];
+      for (var i = 0; i < tail.length; i++) { 
+        result.push(tail[i][3]);
+      }
+      return result;
+    }
 
-//======================================================
-// Keywords
-//======================================================
+VariableDeclarationListNoIn
+  = head:VariableDeclarationNoIn tail:(__ "," __ VariableDeclarationNoIn)* {
+      var result = [head];
+      for (var i = 0; i < tail.length; i++) {
+        result.push(tail[i][3]);
+      }
+      return result;
+    }
 
-BREAK		= n:"break"		!IdChar Spacing { return n; }
-CASE 		= n:"case"		!IdChar Spacing { return n; }
-CHAR 		= n:"char"		!IdChar Spacing { return n; }
-CONTINUE	= n:"continue"	!IdChar Spacing { return n; }
-DEFAULT		= n:"default"	!IdChar Spacing { return n; }
-DOUBLE		= n:"double"	!IdChar Spacing { return n; }
-DO 			= n:"do"		!IdChar Spacing { return n; }
-ELSE 		= n:"else"		!IdChar Spacing { return n; }
-FOR 		= n:"for"		!IdChar Spacing { return n; }
-IF 			= n:"if"		!IdChar Spacing { return n; }
-INT 		= n:"int"		!IdChar Spacing { return n; }
-RETURN 		= n:"return"	!IdChar Spacing { return n; }
-STRING 		= n:"String"	!IdChar Spacing { return n; }
-SWITCH		= n:"switch"	!IdChar Spacing { return n; }
-VOID		= n:"void"		!IdChar Spacing { return n; }
-WHILE		= n:"while"		!IdChar Spacing { return n; }
-BOOL		= n:"boolean"	!IdChar Spacing { return n; }
-COMPLEX		= n:"_Complex"	!IdChar Spacing { return n; }
+VariableDeclaration
+  = name:Identifier value:(__ Initialiser)? {
+  		return AST.variableDeclarator(name, value !== null ? value[1]:null, {line:line, column:column});
+  		/*
+      return {
+        type:  "VariableDeclaration",
+        name:  name,
+        value: value !== null ? value[1] : null
+      };
+      */
+    }
 
-Keyword 
-	= ( "break"
-	  / "case"
-	  / "char"
-	  / "continue"
-	  / "default"
-	  / "double"
-	  / "do"
-	  / "else"
-	  / "for"
-	  / "if"
-	  / "int"
-	  / "return"
-	  / "String"
-	  / "switch"
-	  / "void"
-	  / "while"
-	  / "boolean"
-	  / "_Complex")
-	  !IdChar
+VariableDeclarationNoIn
+  = name:Identifier value:(__ InitialiserNoIn)? {
+  		return AST.variableDeclarator(name, value !== null ? value[1]:null, {line:line, column:column});
+  		/*
+      return {
+        type:  "VariableDeclaration",
+        name:  name,
+        value: value !== null ? value[1] : null
+      };
+      */
+    }
 
-//===============================================
-// Identifiers
-//===============================================
+Initialiser
+  = "=" (!"=") __ expression:AssignmentExpression { return expression; }
 
-Identifier
-	= !Keyword first:IdNondigit chars:IdChar* Spacing {
-		var id = [first];
-		id = id.concat(chars);
-		return id.join("");
-	}
+InitialiserNoIn
+  = "=" (!"=") __ expression:AssignmentExpressionNoIn { return expression; }
 
-IdNondigit
-	= [a-z] / [A-Z] / [_]
-	/ UniversalCharacter
+EmptyStatement
+  = ";" { 
+  	return AST.emptyStatement({line:line, column:column});
+  	//return { type: "EmptyStatement" }; 
+  }
 
-IdChar
-	= [a-z] / [A-Z] / [0-9] / [_]
-	/ UniversalCharacter
+ExpressionStatement
+  = !("{" / FunctionToken) expression:Expression EOS { return expression; }
 
+IfStatement
+  = IfToken __
+    "(" __ condition:Expression __ ")" __
+    ifStatement:Statement
+    elseStatement:(__ ElseToken __ Statement)? {
+    	return AST.ifStatement(condition, ifStatement, elseStatement !== null ? elseStatement[3]:null, {line:line, column:column});
+    	/*
+      return {
+        type:          "IfStatement",
+        condition:     condition,
+        ifStatement:   ifStatement,
+        elseStatement: elseStatement !== null ? elseStatement[3] : null
+      };
+      */
+    }
 
-//===============================================
-// Universal Character Names
-//===============================================
+IterationStatement
+  = DoWhileStatement
+  / WhileStatement
+  / ForStatement
 
-UniversalCharacter
-	= "\\u" HexQuad
-	/ "\\U" HexQuad HexQuad
+DoWhileStatement
+  = DoToken __
+    statement:Statement __
+    WhileToken __ "(" __ condition:Expression __ ")" EOS {
+    	return AST.doWhileStatement(statement, condition, {line:line, column:column});
+    	/*
+      return {
+        type: "DoWhileStatement",
+        condition: condition,
+        statement: statement
+      };
+      */
+    }
 
-HexQuad = HexDigit HexDigit HexDigit HexDigit
+WhileStatement
+  = WhileToken __ "(" __ condition:Expression __ ")" __ statement:Statement {
+  		return AST.whileStatement(condition, statement, {line:line, column:column});
+  		/*
+      return {
+        type: "WhileStatement",
+        condition: condition,
+        statement: statement
+      };
+      */
+    }
 
+ForStatement
+  = ForToken __
+    "(" __
+    initializer:(
+        type:(VarToken/TypeSpecifier) __ declarations:VariableDeclarationListNoIn {
+        	return AST.variableDeclaration(type, false, declarations, {line:line, column:column});
+        	/*
+          return {
+            type:         "VariableStatement",
+            declarations: declarations
+          };
+          */
+        }
+      / ExpressionNoIn?
+    ) __
+    ";" __
+    test:Expression? __
+    ";" __
+    counter:Expression? __
+    ")" __
+    statement:Statement
+    {
+    	return AST.forStatement(initializer, test, counter, statement, {line:line, column:column});
+    	/*
+      return {
+        type:        "ForStatement",
+        initializer: initializer,
+        test:        test,
+        counter:     counter,
+        statement:   statement
+      };
+      */
+    }
 
-//==============================================
-// Constants
-//==============================================
+ContinueStatement
+  = ContinueToken _
+    label:(
+        identifier:Identifier EOS { return identifier; }
+      / EOSNoLineTerminator       { return "";         }
+    ) {
+    	return AST.continueStatement({line:line, column:column});
+    	/*
+      return {
+        type:  "ContinueStatement",
+        label: label !== "" ? label : null
+      };
+      */
+    }
 
-Constant
-	= FloatConstant
-	/ IntegerConstant
-	/ CharacterConstant
+BreakStatement
+  = BreakToken _
+    label:(
+        identifier:Identifier EOS { return identifier; }
+      / EOSNoLineTerminator       { return ""; }
+    ) {
+    	return AST.breakStatement({line:line, column:column});
+    	/*
+      return {
+        type:  "BreakStatement",
+        label: label !== "" ? label : null
+      };
+      */
+    }
 
-IntegerConstant
-	= ( DecimalConstant
-	  / HexConstant
-	  / OctalConstant
-	  )
-	Spacing
+ReturnStatement
+  = ReturnToken _
+    value:(
+        expression:Expression EOS { return expression; }
+      / EOSNoLineTerminator       { return ""; }
+    ) {
+    	return AST.returnStatement(value !== "" ? value : null, {line:line, column:column});
+    	/*
+      return {
+        type:  "ReturnStatement",
+        value: value !== "" ? value : null
+      };
+      */
+    }
 
-DecimalConstant = [1-9][0-9]*
+SwitchStatement
+  = SwitchToken __ "(" __ expression:Expression __ ")" __ clauses:CaseBlock {
+  		return AST.switchStatement(expression, clauses, {line:line, column:column});
+  		/*
+      return {
+        type:       "SwitchStatement",
+        expression: expression,
+        clauses:    clauses
+      };
+      */
+    }
 
-OctalConstant = "0"[0-7]*
+CaseBlock
+  = "{" __
+    before:CaseClauses?
+    defaultAndAfter:(__ DefaultClause __ CaseClauses?)? __
+    "}" {
+      var before = before !== null ? before : [];
+      if (defaultAndAfter !== null) {
+        var defaultClause = defaultAndAfter[1];
+        var clausesAfter = defaultAndAfter[3] !== null
+          ? defaultAndAfter[3]
+          : [];
+      } else {
+        var defaultClause = null;
+        var clausesAfter = [];
+      }
 
-HexConstant = HexPrefix HexDigit*
+      return (defaultClause ? before.concat(defaultClause) : before).concat(clausesAfter);
+    }
 
-HexPrefix = "0x" / "0X"
+CaseClauses
+  = head:CaseClause tail:(__ CaseClause)* {
+      var result = [head];
+      for (var i = 0; i < tail.length; i++) {
+        result.push(tail[i][1]);
+      }
+      return result;
+    }
 
-HexDigit = [a-f] / [A-F] / [0-9]
+CaseClause
+  = CaseToken __ selector:Expression __ ":" statements:(__ StatementList)? {
+  		return AST.switchCase(selector, statements, {line:line, column:column});
+  		/*
+      return {
+        type:       "CaseClause",
+        selector:   selector,
+        statements: statements !== null ? statements[1] : []
+      };
+      */
+    }
 
-FloatConstant
-	= ( DecimalFloatConstant
-	  / HexFloatConstant
-	  )
-	  Spacing
+DefaultClause
+  = DefaultToken __ ":" statements:(__ StatementList)? {
+  		return AST.switchCase(null, statements, {line:line, column:column});
+  		/*
+      return {
+        type:       "DefaultClause",
+        statements: statements !== null ? statements[1] : []
+      };
+      */
+    }
 
-DecimalFloatConstant
-	= Fraction Exponent?
-	/ [0-9]+ Exponent
+LabelledStatement
+  = label:Identifier __ ":" __ statement:Statement {
+  		return AST.labeledStatement(label, statement, {line:line, column:column});
+  		/*
+      return {
+        type:      "LabelledStatement",
+        label:     label,
+        statement: statement
+      };
+      */
+    }
 
-HexFloatConstant
-	= HexPrefix HexFraction BinaryExponent?
-	/ HexPrefix HexDigit+ BinaryExponent
+/* ===== A.5 Functions and Programs ===== */
 
-Fraction
-	= [0-9]* "." [0-9]+
-	/ [0-9]+ "."
+FunctionDeclaration
+  = retType:(FunctionToken/TypeSpecifier) __ name:Identifier __
+    "(" __ params:FormalParameterList? __ ")" __
+    "{" __ elements:FunctionBody __ "}" {
+    	return AST.functionDeclaration(retType, name, params !== null ? params : [], elements, {line:line, column:column});
+    	/*
+      return {
+        type:     "Function",
+        retType: retType,
+        name:     name,
+        params:   params !== null ? params : [],
+        elements: elements
+      };
+      */
+    }
 
-HexFraction
-	= HexDigit* "." HexDigit
-	/ HexDigit+ "."
+FunctionExpression
+  = retType:(FunctionToken/TypeSpecifier) __ name:Identifier? __
+    "(" __ params:FormalParameterList? __ ")" __
+    "{" __ elements:FunctionBody __ "}" {
+    	return AST.functionDeclaration(retType, name, params !== null ? params : [], elements, {line:line, column:column});
+    	/*
+      return {
+        type:     "Function",
+        retType: retType,
+        name:     name,
+        params:   params !== null ? params : [],
+        elements: elements
+      };
+      */
+    }
 
-Exponent = [eE][+\-]? [0-9]+
+FormalParameterList
+  = headType:TypeSpecifier __ arrSpec:ArrayTypeSpecifier? __ head:Identifier 
+    tail:(__ "," __ TypeSpecifier __ ArrayTypeSpecifier? __ Identifier)* {
+      /*
+      var result = [{
+         type: headType,
+         name: head,
+         isArray: arrSpec  ? true : false,
+      }];
+      */
+      var declarator = AST.variableDeclarator(name, null, {line:line, column:column});
+      var result = [AST.variableDeclaration(headType, arrSpec ? true:false, [declarator], {line:line, column:column})];
 
-BinaryExponent = [pP][+\-]? [0-9]+
+      for (var i = 0; i < tail.length; i++) {
+      	var tailDeclarator = AST.variableDeclarator(tail[i][7], null, {line:line, column:column});
+      	result.push(AST.variableDeclaration(tail[i][3], tail[i][5] ? true:false, [tailDeclarator], {line:line, column:column}));
+        /*
+        result.push({
+        	type:tail[i][3], 
+        	name:tail[i][7], 
+        	isArray: tail[i][5] ? true : false,
+        });
+		*/
+      }
+      return result;
+    }
 
-CharacterConstant = "L"? "'" Char* "'" Spacing
+ArrayTypeSpecifier
+	= "[" __ "]" { return true; }
 
-Char = Escape / !['\n\\] .
+FunctionBody
+  = elements:SourceElements? { return elements !== null ? elements : []; }
 
-Escape
-	= SimpleEscape
-	/ OctalEscape
-	/ HexEscape
-	/ UniversalCharacter
+Program
+  = elements:SourceElements? {
+  		return AST.program(elements !== null ? elements : [], {line:line, column:column});
+  		/*
+      return {
+        type:     "Program",
+        elements: elements !== null ? elements : []
+      };
+      */
+    }
 
-SimpleEscape = "\\" ['\"?\\abfnrtv]
-OctalEscape = "\\" [0-7][0-7]?[0-7]?
-HexEscape = "\\x" HexDigit+
+SourceElements
+  = head:SourceElement tail:(__ SourceElement)* {
+      var result = [head];
+      for (var i = 0; i < tail.length; i++) {
+        result.push(tail[i][1]);
+      }
+      return result;
+    }
 
-
-//======================================
-// String Literals
-//======================================
-
-StringLiteral = "L"?(["] StringChar* ["] Spacing)+
-
-StringChar = Escape / ![\"\n\\] .
-
-
-//======================================
-// Punctuators
-//======================================
-
-LBRK		= "["			Spacing
-RBRK		= "]"			Spacing
-LPAR		= "("			Spacing
-RPAR		= ")"			Spacing
-LWING		= "{"			Spacing
-RWING		= "}"			Spacing
-DOT 		= "."			Spacing
-INC 		= "++"			Spacing
-DEC 		= "--"			Spacing
-AND 		= "&" ![&]		Spacing
-STAR 		= "*" ![=]		Spacing
-PLUS 		= "+" ![+=]		Spacing
-MINUS 		= "-" ![\-=>]	Spacing
-TILDE 		= "~"			Spacing
-BANG 		= "!" ![=]		Spacing
-DIV 		= "/" ![=]		Spacing
-MOD 		= "%" ![=>]		Spacing
-LEFT 		= "<<" ![=]		Spacing
-RIGHT 		= ">>" ![=]		Spacing
-LT 			= "<" ![=]		Spacing
-GT			= ">" ![=]		Spacing
-LE 			= "<="			Spacing
-GE 			= ">="			Spacing
-EQUEQU 		= "=="			Spacing
-BANGEQU		= "!="			Spacing
-HAT 		= "^" ![=]		Spacing
-OR 			= "|" ![=]		Spacing
-ANDAND 		= "&&"			Spacing
-OROR 		= "||"			Spacing
-QUERY		= "?"			Spacing
-COLON 		= ":" ![>]		Spacing
-SEMI 		= ";"			Spacing
-ELLIPSIS 	= "..."			Spacing
-EQU 		= "=" !"="		Spacing
-STAREQU		= "*="			Spacing
-DIVEQU		= "/="			Spacing
-MODEQU		= "%="			Spacing
-PLUSEQU		= "+="			Spacing
-MINUSEQU	= "-="			Spacing
-LEFTEQU		= "<<="			Spacing
-RIGHTEQU	= ">>="			Spacing
-ANDEQU		= "&="			Spacing
-HATEQU		= "^="			Spacing
-OREQU		= "|="			Spacing
-COMMA		= ","			Spacing
-
-EOT 		= !.
+/*
+ * The specification also allows |FunctionDeclaration| here. We do it
+ * implicitly, because we consider |FunctionDeclaration| and
+ * |FunctionExpression| as statements. See the comment at the |Statement| rule.
+ */
+SourceElement
+  = Statement

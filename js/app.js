@@ -1,7 +1,7 @@
 define(['jquery', 'underscore',
     'robot', 'field', 'sensors/rangefinder',
-    'simulation'],
-function($, _, Robot, Field, RangeFinder, Simulation) {
+    'simulation', 'ast/ast', 'ast/parser'],
+function($, _, Robot, Field, RangeFinder, Simulation, AST, Parser) {
 
     var mouseDown = false;
     var lastY;
@@ -114,6 +114,21 @@ function($, _, Robot, Field, RangeFinder, Simulation) {
                 else {
                     robot.speed = 0;
                     speedEntry.value = 0;
+                }
+            });
+
+            forwardBtn.addEventListener('click', function() {
+                console.log(editor.getSession().getValue());
+                try {
+                    var result = Parser.parse(editor.getSession().getValue());
+                    console.log('result: ', result);
+                    console.log('program Statements');
+                    for (var i in result.statements) {
+                        console.log('[' + i + ']', result.statements[i]);
+                    }
+                }
+                catch (e) {
+                    console.warn(e);
                 }
             });
         }
