@@ -718,12 +718,12 @@ function() {
 			return new Program(statements, loc);
 		},
 
-		functionDeclaration: function(name, args, body, loc) {
-			return new FunctionDeclaration(name, args, body, loc);
+		functionDeclaration: function(type, name, args, body, loc) {
+			return new FunctionDeclaration(type, name, args, body, loc);
 		},
 
 		variableDeclaration: function(type, isArray, declarators, loc) {
-			return new VariableDeclaration(type, declarators, loc);
+			return new VariableDeclaration(type, isArray, declarators, loc);
 		},
 
 		variableDeclarator: function(pattern, init, loc) {
