@@ -17,6 +17,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "Program";
+			}
+		});
 	}
 
 	//Declarations
@@ -56,6 +62,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "FunctionDeclaration";
+			}
+		});
 	}
 	
 	function VariableDeclaration (type, isArray, declarators, loc) {
@@ -87,6 +99,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "VariableDeclaration";
+			}
+		});
 	}
 
 	function VariableDeclarator (name, init, loc) {
@@ -111,6 +129,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "VariableDeclarator";
+			}
+		});
 	}
 
 	//Expressions
@@ -127,6 +151,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "SequenceExpression";
 			}
 		});
 	}
@@ -160,6 +190,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "ConditionalExpression";
+			}
+		});
 	}
 
 	function UnaryExpression (op, arg, isPrefix, loc) {
@@ -189,6 +225,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "UnaryExpression";
 			}
 		});
 	}
@@ -222,6 +264,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "BinaryExpression";
+			}
+		});
 	}
 
 	function AssignmentExpression (assignOp, left, right, loc) {
@@ -251,6 +299,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "AssignmentExpression";
 			}
 		});
 	}
@@ -284,6 +338,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "LogicalExpression";
+			}
+		});
 	}
 
 	function UpdateExpression (updateOp, arg, isPrefix, loc) {
@@ -315,6 +375,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "UpdateExpression";
+			}
+		});
 	}
 
 	function CallExpression (callee, args, loc) {
@@ -337,6 +403,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "CallExpression";
 			}
 		});
 	}
@@ -363,6 +435,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "MemberExpression";
+			}
+		});
 	}
 
 	function ArrayExpression (elements, loc) {
@@ -378,6 +456,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "ArrayExpression";
 			}
 		});
 	}
@@ -399,6 +483,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "VariableStatement";
+			}
+		});
 	}
 
 	function EmptyStatement (loc) {
@@ -407,6 +497,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "EmptyStatement";
 			}
 		});
 	}
@@ -426,6 +522,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "BlockStatement";
+			}
+		});
 	}
 
 	function ExpressionStatement (expression, loc) {
@@ -441,6 +543,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "ExpressionStatement";
 			}
 		});
 	}
@@ -465,6 +573,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "LabeledStatement";
 			}
 		});
 	}
@@ -498,6 +612,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "IfStatement";
+			}
+		});
 	}
 
 	function SwitchStatement (testExpr, cases, loc) {
@@ -520,6 +640,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "SwitchStatement";
 			}
 		});
 	}
@@ -547,6 +673,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "SwitchCase";
+			}
+		});
 	}
 
 	function WhileStatement (test, body, loc) {
@@ -571,6 +703,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "WhileStatement";
+			}
+		});
 	}
 
 	function DoWhileStatement (body, test, loc) {
@@ -593,6 +731,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "DoWhileStatement";
 			}
 		});
 	}
@@ -633,6 +777,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "ForStatement";
+			}
+		});
 	}
 
 	function BreakStatement (loc) {
@@ -643,6 +793,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "BreakStatement";
+			}
+		});
 	}
 
 	function ContinueStatement (loc) {
@@ -651,6 +807,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "ContinueStatement";
 			}
 		});
 	}
@@ -670,6 +832,12 @@ function() {
 				return _loc;
 			}
 		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "ReturnStatement";
+			}
+		});
 	}
 
 	function Identifier (label, loc) {
@@ -685,6 +853,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "Identifier";
 			}
 		});
 	}
@@ -709,6 +883,12 @@ function() {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
+			}
+		});
+
+		Object.defineProperty(this, 'nodeType', {
+			get: function() {
+				return "Literal";
 			}
 		});
 	}
