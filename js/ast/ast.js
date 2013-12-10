@@ -7,6 +7,35 @@ function(TypeChecker) {
 		this.loc = loc;
 	}
 
+	function _fetchFromContext(ident, context, callContext, loc) {
+		var ctx = context;
+		var value;
+		var found = false;
+		while (ctx) {
+			if (ctx[ident] !== undefined) {
+				console.log('found ' + ident + ' in context');
+				value = ctx[ident].value;
+				found = true;
+				break;
+			}
+
+			ctx = ctx.__parentContext;
+		}
+
+		if (!found) {
+			throw new InterpreterError("Could not find '" + ident + "' in current executing context", callContext, loc);
+		}
+
+		return value;
+	}
+
+	function _getValue(thing, context) {
+		if (thing.nodeType === "Identifier") {
+			return _fetchFromContext(thing.execute(context), context, thing, thing.loc);
+		}
+		return thing.execute(context);
+	}
+
 	//Program
 	function Program(statements, loc) {
 		var _statements = statements;
@@ -15,19 +44,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'statements', {
 			get: function() {
 				return _statements;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "Program";
-			}
+			},
+			enumerable: true
 		});
 
 		this.execute = function(context) {
@@ -53,37 +85,43 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return _type;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'name', {
 			get: function() {
 				return _name;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'parameters', {
 			get: function() {
 				return _args;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _body;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "FunctionDeclaration";
-			}
+			},
+			enumerable: true
 		});
 
 		//All we need to do for a FunctionDeclaration is register it
@@ -95,11 +133,8 @@ function(TypeChecker) {
 
 			context[_name] = {
 				type: "function",
-				ref: _body, //Just need to store the ref to the actual object,
+				ref: this, //Just need to store the ref to the actual object,
 				parameters: _args,
-				context: {
-					__parentContext: context //Store the parent context
-				}
 			};
 		}.bind(this);
 	}
@@ -113,40 +148,44 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return _type;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'isArray', {
 			get: function() {
 				return _isArray;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'declarators', {
 			get: function() {
 				return _declarators;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "VariableDeclaration";
-			}
+			},
+			enumerable: true
 		});
 
 		//Register the variables in the context
 		this.execute = function(context) {
-			console.log("executing VariableDeclaration", context);
 			//We need to parse the declarators
 			for (var i = 0, len = _declarators.length; i < len; i++) {
 				var declarator = _declarators[i];
-				console.log('declarator name: ', declarator.name);
+				console.log('declarator: ', declarator);
 				if (context[declarator.name] !== undefined) {
 					throw new InterpreterError("'" + declarator.name + "' already exists in current execution context", declarator, declarator.loc);
 				}
@@ -157,16 +196,38 @@ function(TypeChecker) {
 				};
 
 				if (declarator.initializer !== undefined) {
-					console.log("beginning typecheck");
-					if (TypeChecker.typeCheck(_type, declarator.initializer)) {
-						//success
-						try {
-							variable.value = TypeChecker.coerceValue(declarator.initializer.value, _type);
-						}
-						catch (e) {
-							console.warn("We have an error");
-							console.warn(e.message);
-						}
+					var initializer = declarator.initializer;
+					//Type check the variable
+					//The initializer will always be some expression/literal (i.e. it will always have .execute())
+					if (declarator.initializer.execute === undefined) {
+						throw new InterpreterError("Could not obtain value for declarator '" + declarator.name + "'", declarator, declarator.loc);
+					}
+					var value = _getValue(initializer, context);
+					console.log('value: ', value);
+
+					//Try to typecheck now
+					if (TypeChecker.typeCheck(_type, value)) {
+						value = TypeChecker.coerceValue(_type, value);
+					}
+					else {
+						throw new InterpreterError("Attempting to assign value of type '" + (typeof value) + "' to variable of type '" + _type + "'");
+					}
+					console.log('after type coercion', value);
+					variable.value = value;
+				}
+				else {
+					//sensible defaults
+					switch (_type) {
+						case "int":
+						case "double":
+							variable.value = 0;
+							break;
+						case "boolean":
+							variable.value = false;
+							break;
+						case "string":
+							variable.value = "";
+							break;
 					}
 				}
 
@@ -184,25 +245,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'name', {
 			get: function() {
 				return _name;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'initializer', {
 			get: function() {
 				return _initializer;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "VariableDeclarator";
-			}
+			},
+			enumerable: true
 		});
 
 		//This does not need an 'execute' method
@@ -216,19 +281,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'expression', {
 			get: function() {
 				return _expression;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "SequenceExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -241,31 +309,36 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'condition', {
 			get: function() {
 				return _condition;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'trueExpression', {
 			get: function() {
 				return _trueExpression;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'falseExpression', {
 			get: function() {
 				return _falseExpression;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "ConditionalExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -278,31 +351,36 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'operator', {
 			get: function() {
 				return _operator;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'expression', {
 			get: function() {
 				return _expression;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'isPrefix', {
 			get: function() {
 				return _isPrefix;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "UnaryExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -315,32 +393,155 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'operator', {
 			get: function() {
 				return _operator;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'left', {
 			get: function() {
 				return _left;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'right', {
 			get: function() {
 				return _right;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "BinaryExpression";
-			}
+			},
+			enumerable: true
 		});
+
+		this.execute = function(context) {
+			var leftVal, rightVal;
+			if (_left.nodeType === "Identifier") {
+				leftVal = _fetchFromContext(_left.execute(context), context, _left, _left.loc);
+			}
+			else {
+				leftVal = _left.execute(context);
+			}
+
+			if (_right.nodeType === "Identifier") {
+				rightVal = _fetchFromContext(_right.execute(context), context, _right, _right.loc);
+			}
+			else {
+				rightVal = _right.execute(context);
+			}
+
+			//depending on what operator we have
+			switch (_operator) {
+				case "+":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						//special case for bools
+						if (typeof leftVal === "boolean")
+							return leftVal | rightVal;
+						return leftVal + rightVal;
+					}
+					else {
+						//TODO: Implement 
+						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) + TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case "-":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						//special case for bools
+						if (typeof leftVal === "boolean")
+							throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
+						//we can't freaking subtract strings...
+						if (typeof leftVal === "string")
+							throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
+						return leftVal - rightVal;
+					}
+					else {
+						//TODO: Implement 
+						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType === "boolean") 
+								throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
+							if (commonType === "string")
+								throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
+							return (TypeChecker.coerceValue(commonType, leftVal) - TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case "*":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						//special case for bools
+						if (typeof leftVal === "boolean")
+							throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
+						//we can't freaking subtract strings...
+						if (typeof leftVal === "string")
+							throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
+						return leftVal * rightVal;
+					}
+					else {
+						//TODO: Implement 
+						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType === "boolean") 
+								throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
+							if (commonType === "string")
+								throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
+							return (TypeChecker.coerceValue(commonType, leftVal) * TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case "/":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						//special case for bools
+						if (typeof leftVal === "boolean")
+							throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
+						//we can't freaking subtract strings...
+						if (typeof leftVal === "string")
+							throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
+						return leftVal / rightVal;
+					}
+					else {
+						//TODO: Implement 
+						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType === "boolean") 
+								throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
+							if (commonType === "string")
+								throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
+							return (TypeChecker.coerceValue(commonType, leftVal) / TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+			}
+		}.bind(this);
 	}
 
 	function AssignmentExpression (assignOp, left, right, loc) {
@@ -352,31 +553,36 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'operator', {
 			get: function() {
 				return _operator;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'left', {
 			get: function() {
 				return _left;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'right', {
 			get: function() {
 				return _right;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "AssignmentExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -389,31 +595,36 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'operator', {
 			get: function() {
 				return _operator;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'left', {
 			get: function() {
 				return _left;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'right', {
 			get: function() {
 				return _right;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "LogicalExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -426,31 +637,36 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'operator', {
 			get: function() {
 				return _operator;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'expression', {
 			get: function() {
 				return _expression;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'isPrefix', {
 			get: function() {
 				return _isPrefix;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "UpdateExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -462,25 +678,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'callee', {
 			get: function() {
 				return _callee;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'args', {
 			get: function() {
 				return _args;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "CallExpression";
-			}
+			},
+			enumerable: true
 		});
 
 		this.execute = function(context) {
@@ -499,10 +719,12 @@ function(TypeChecker) {
 						if (context[identName] === undefined) {
 							throw new InterpreterError("'" + identName + "' is undefined in the current execution context", this, _loc);
 						}
-						valArg.push(context[identName].value);
+						value = _fetchFromContext(identName, context, arg, arg.loc);
+						valArg.push(value);
 					}
-					else if (arg.nodeType === 'Literal') {
-						valArg.push(arg.execute());
+					else {
+						value = arg.execute(context);
+						valArg.push(value);
 					}
 					// value = _args[i].execute();
 					console.log('[' + i + '] - ', value, _args[i].nodeType);
@@ -530,8 +752,8 @@ function(TypeChecker) {
 				}
 
 				//We need to execute the function
-				for (i = 0, len = fn.ref.length; i < len; i++) {
-					var statement = fn.ref[i];
+				for (i = 0, len = fn.ref.body.length; i < len; i++) {
+					var statement = fn.ref.body[i];
 					statement.execute(fnContext);
 					//statement.execute()
 				}
@@ -547,25 +769,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'base', {
 			get: function() {
 				return _base;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'property', {
 			get: function() {
 				return _prop;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "MemberExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -576,19 +802,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'elements', {
 			get: function() {
 				return _elements;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "ArrayExpression";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -601,19 +830,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'variables', {
 			get: function() {
 				return _variableDeclarations;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "VariableStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -623,13 +855,15 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "EmptyStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -640,19 +874,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _body;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "BlockStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -663,19 +900,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'expression', {
 			get: function() {
 				return _expression;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "ExpressionStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -687,25 +927,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'label', {
 			get: function() {
 				return _label;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _body;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "LabeledStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -718,31 +962,36 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'condition', {
 			get: function() {
 				return _condition;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'trueStatement', {
 			get: function() {
 				return _trueStatement;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'elseStatement', {
 			get: function() {
 				return _elseStatement;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "IfStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -754,25 +1003,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'condition', {
 			get: function() {
 				return _condition;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'cases', {
 			get: function() {
 				return _cases;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "SwitchStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -785,25 +1038,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'test', {
 			get: function() {
 				return _test;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _statements;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "SwitchCase";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -815,25 +1072,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'condition', {
 			get: function() {
 				return _condition;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _body;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "WhileStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -845,25 +1106,29 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _body;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'condition', {
 			get: function() {
 				return _test;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "DoWhileStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -877,37 +1142,43 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'initializer', {
 			get: function() {
 				return _init;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'condition', {
 			get: function() {
 				return _test;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'update', {
 			get: function() {
 				return _update;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'body', {
 			get: function() {
 				return _body;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "ForStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -917,13 +1188,15 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "BreakStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -933,13 +1206,15 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "ContinueStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -950,19 +1225,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'argument', {
 			get: function() {
 				return _arg;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "ReturnStatement";
-			}
+			},
+			enumerable: true
 		});
 	}
 
@@ -973,19 +1251,22 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'label', {
 			get: function() {
 				return _label;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "Identifier";
-			}
+			},
+			enumerable: true
 		});
 
 		this.execute = function(context) {
@@ -1001,29 +1282,32 @@ function(TypeChecker) {
 		Object.defineProperty(this, 'value', {
 			get: function() {
 				return _value;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return _type;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'loc', {
 			get: function() {
 				return _loc;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(this, 'nodeType', {
 			get: function() {
 				return "Literal";
-			}
+			},
+			enumerable: true
 		});
 
 		this.execute = function() {
-			console.log("Literal has value " + _value);
 			return _value;
 		};
 	}

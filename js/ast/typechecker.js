@@ -4,69 +4,95 @@ function() {
 		this.message = message;
 	}
 
+	//'value' will always be a simple type (number, string, boolean)
 	function typeCheck (type, value) {
 		switch (type) {
-			case "int": {
-				console.log("type checking int");
-				if (value.nodeType && value.nodeType == "Literal") {
-					console.log("type checking Literal");
-					return typeCheckInitializer (type, value);
-				}
+			case "int": //We accept number
+			case "double":
+				return (typeof value === "number");
 
-				//Otherwise uh... execute
-			}
+			case "boolean": //we accept boolean, and number
+				return (typeof value === "boolean" || typeof value === "number");
 
-
-		}
-	}
-
-	function typeCheckInitializer (type, initializer) {
-		//initializer 'value' function returns {type, value}
-		switch (initializer.type) {
-			case "NumericLiteral":
-				return true; //NumericLiterals can be used anywhere
-
-			case "StringLiteral":
-				return (type === "string");
-
-			case "BooleanLiteral":
+			case "string": //we'll take ANYTHING
 				return true;
 		}
 	}
 
+	//coerce value to a given type
+	function coerceValue(type, value) {
+		switch (type) {
+			case "int":
+				if (typeof value === "boolean") {
+					return value ? 1 : 0;
+				}
+				return parseInt(value, 10);
+
+			case "double":
+				if (typeof value === "boolean") {
+					return value ? 1 : 0;
+				}
+				return parseFloat(value, 10);
+
+			case "string":
+				return "" + value + "";
+
+			case "boolean":
+				var val = parseInt(value, 10);
+				if (isNaN(val)) return false;
+				return (val !== 0);
+		}
+	}
+
+	function greatestCommonType (valueArray) {
+		var hasInt = false, hasDouble = false, hasBoolean = false, hasString = false;
+		for (var i = 0, len = valueArray.length; i < len; i++) {
+			var val = valueArray[i];
+
+			if (typeof val === "number") {
+				//we need to differentiate
+				var intVal = parseInt(val);
+				var floatVal = parseFloat(val);
+
+				if (intVal == floatVal) {
+					hasInt = true;
+				}
+				else {
+					hasDouble = true;
+				}
+			}
+			else if (typeof val === "string") 
+				hasString = true;
+			else if (typeof val === "boolean")
+				hasBoolean = true;
+		}
+
+		//return self type if all are the same type
+		if (hasInt && !hasDouble && !hasString && !hasBoolean)
+			return "int";
+		if (hasDouble && !hasInt && !hasString && !hasBoolean)
+			return "double";
+		if (hasBoolean && !hasInt && !hasString && !hasDouble)
+			return "boolean";
+		if (hasString && !hasInt && !hasDouble && !hasBoolean)
+			return "string";
+
+		if (hasDouble && !hasString) // we can convert bool/int/double -> double
+			return "double";
+		if (hasInt && !hasDouble && !hasString) //we can convert bool/int -> int
+			return "int";
+		if (hasBoolean && !hasString) // we can convert int/double/bool -> bool
+			return "boolean"
+		if (hasString)
+			return "string";
+		else
+			return null;
+
+	}
+
 	return {
 		typeCheck: typeCheck,
-
-		typeCheckInitializer: typeCheckInitializer,
-
-		coerceValue: function (value, type) {
-			switch (type) {
-				case "int":
-					if (typeof value == "boolean") {
-						if (value) {
-							return 1;
-						}
-						return 0;
-					}
-					return parseInt(value, 10);
-				case "double":
-					if (typeof value == "boolean") {
-						if (value) {
-							return 1;
-						}
-						return 0;
-					}
-					return parseFloat(value, 10);
-				case "string":
-					return "" + value + "";
-				case "boolean":
-					var val = parseInt(value, 10);
-					if (isNaN(val)) {
-						throw new TypeError("Could not coerce '" + value + "' to boolean");
-					}
-					return (val !== 0);
-			}
-			
-		}
+		coerceValue: coerceValue,
+		greatestCommonType: greatestCommonType,
 	};
 });

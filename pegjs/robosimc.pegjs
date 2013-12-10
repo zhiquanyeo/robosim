@@ -149,16 +149,23 @@ NumericLiteral "number"
 
 DecimalLiteral
   = parts:(DecimalIntegerLiteral "." DecimalDigits? ExponentPart?) {
-      return parseFloat(parts);
+      return parseFloat(parts.join(""));
     }
-  / parts:("." DecimalDigits ExponentPart?)     { return parseFloat(parts); }
-  / parts:(DecimalIntegerLiteral ExponentPart?) { return parseFloat(parts); }
+  / parts:("." DecimalDigits ExponentPart?)     { return parseFloat(parts.join("")); }
+  / parts:(DecimalIntegerLiteral ExponentPart?) { return parseFloat(parts.join("")); }
 
 DecimalIntegerLiteral
-  = "0" / NonZeroDigit DecimalDigits?
+  = "0" 
+  / (head:NonZeroDigit tail:DecimalDigits? {
+      var result = [head];
+      if (tail) result = result.concat(tail);
+      return result.join("");
+  })
 
 DecimalDigits
-  = DecimalDigit+
+  = digits:DecimalDigit+ {
+    if (digits) return digits.join("");
+  }
 
 DecimalDigit
   = [0-9]
@@ -167,13 +174,17 @@ NonZeroDigit
   = [1-9]
 
 ExponentPart
-  = ExponentIndicator SignedInteger
+  = parts:(ExponentIndicator SignedInteger) {
+      return parts.join("");
+  }
 
 ExponentIndicator
   = [eE]
 
 SignedInteger
-  = [-+]? DecimalDigits
+  = parts:([-+]? DecimalDigits) {
+      return parts.join("");
+  }
 
 HexIntegerLiteral
   = "0" [xX] digits:HexDigit+ { return parseInt("0x" + digits); }

@@ -101,19 +101,21 @@ function() {
 		var _scope = {};
 
 		//Need to verify the program
-		var scope = _verifyProgram(_ast);
-		console.log('Program Verification Complete');
-		console.log(scope);
+		//var scope = _verifyProgram(_ast);
+		//console.log('Program Verification Complete');
+		//console.log(scope);
 
 		var theScope = {
 			'print': {
 				type: 'function',
-				ref: [ {
-					execute: function(context) {
-						console.log(context['printString']);
+				ref: {
+					body: [ {
+						execute: function(context) {
+							console.log('[PROGRAM OUTPUT]',context['printString']);
+						}
 					}
-				}
-				],
+					]
+				},
 				parameters: [{
 					type: "string",
 					name: "printString",
