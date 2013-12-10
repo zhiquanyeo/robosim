@@ -1,6 +1,12 @@
 /* AST with various constituent objects */
-define([],
-function() {
+define(['./typechecker'],
+function(TypeChecker) {
+	//Errors
+	function InterpreterError(message, data, loc) {
+		this.message = message;
+		this.loc = loc;
+	}
+
 	//Program
 	function Program(statements, loc) {
 		var _statements = statements;
@@ -23,6 +29,17 @@ function() {
 				return "Program";
 			}
 		});
+
+		this.execute = function(context) {
+			//Loop through the statements
+			for (var i = 0, len = _statements.length; i < len; i++) {
+				var statement = _statements[i];
+				if (!statement.execute) {
+					throw new InterpreterError("Statement does not implement execute()", statement, _loc);
+				}
+				statement.execute(context);
+			}
+		};
 	}
 
 	//Declarations
@@ -68,6 +85,23 @@ function() {
 				return "FunctionDeclaration";
 			}
 		});
+
+		//All we need to do for a FunctionDeclaration is register it
+		this.execute = function (context) {
+			//Check if this already exists in context
+			if (context[_name] !== undefined) {
+				throw new InterpreterError("'" + _name + "' already exists in execution context", this, _loc);
+			}
+
+			context[_name] = {
+				type: "function",
+				ref: _body, //Just need to store the ref to the actual object,
+				parameters: _args,
+				context: {
+					__parentContext: context //Store the parent context
+				}
+			};
+		}.bind(this);
 	}
 	
 	function VariableDeclaration (type, isArray, declarators, loc) {
@@ -105,6 +139,41 @@ function() {
 				return "VariableDeclaration";
 			}
 		});
+
+		//Register the variables in the context
+		this.execute = function(context) {
+			console.log("executing VariableDeclaration", context);
+			//We need to parse the declarators
+			for (var i = 0, len = _declarators.length; i < len; i++) {
+				var declarator = _declarators[i];
+				console.log('declarator name: ', declarator.name);
+				if (context[declarator.name] !== undefined) {
+					throw new InterpreterError("'" + declarator.name + "' already exists in current execution context", declarator, declarator.loc);
+				}
+
+				var variable = {
+					type: "variable",
+					varType: _type,
+				};
+
+				if (declarator.initializer !== undefined) {
+					console.log("beginning typecheck");
+					if (TypeChecker.typeCheck(_type, declarator.initializer)) {
+						//success
+						try {
+							variable.value = TypeChecker.coerceValue(declarator.initializer.value, _type);
+						}
+						catch (e) {
+							console.warn("We have an error");
+							console.warn(e.message);
+						}
+					}
+				}
+
+				context[declarator.name] = variable;
+			}
+
+		}.bind(this);
 	}
 
 	function VariableDeclarator (name, init, loc) {
@@ -135,6 +204,8 @@ function() {
 				return "VariableDeclarator";
 			}
 		});
+
+		//This does not need an 'execute' method
 	}
 
 	//Expressions
@@ -411,6 +482,61 @@ function() {
 				return "CallExpression";
 			}
 		});
+
+		this.execute = function(context) {
+			console.log('Executing CallExpression', _callee.execute());
+			var callee = _callee.execute();
+			var fn = context[callee];
+			if (fn && fn.type === "function") {
+				console.log('found the function');
+				console.log('args...');
+				var valArg = [];
+				for (var i = 0, len = _args.length; i < len; i++) {
+					var arg = _args[i];
+					var value;
+					if (arg.nodeType === 'Identifier') {
+						var identName = arg.execute();
+						if (context[identName] === undefined) {
+							throw new InterpreterError("'" + identName + "' is undefined in the current execution context", this, _loc);
+						}
+						valArg.push(context[identName].value);
+					}
+					else if (arg.nodeType === 'Literal') {
+						valArg.push(arg.execute());
+					}
+					// value = _args[i].execute();
+					console.log('[' + i + '] - ', value, _args[i].nodeType);
+				}
+
+				console.log('arguments to pass: ', valArg);
+
+				var fnContext = {
+					__parentContext: context
+				};
+
+				if (valArg.length != fn.parameters.length) {
+					throw new InterpreterError("Incorrect number of parameters passed to function", this, _loc);
+				}
+
+				console.log('function takes in params:');
+				for (i = 0, len = fn.parameters.length; i < len; i++) {
+					//array of declarations
+					var param = fn.parameters[i];
+					console.log(param);
+
+					//Need to finalize what the layout of this array will be
+
+					fnContext[param.name] = valArg[i];
+				}
+
+				//We need to execute the function
+				for (i = 0, len = fn.ref.length; i < len; i++) {
+					var statement = fn.ref[i];
+					statement.execute(fnContext);
+					//statement.execute()
+				}
+			}
+		};
 	}
 
 	function MemberExpression (obj, prop, loc) {
@@ -861,6 +987,10 @@ function() {
 				return "Identifier";
 			}
 		});
+
+		this.execute = function(context) {
+			return _label;
+		};
 	}
 
 	function Literal (value, type, loc) {
@@ -891,6 +1021,11 @@ function() {
 				return "Literal";
 			}
 		});
+
+		this.execute = function() {
+			console.log("Literal has value " + _value);
+			return _value;
+		};
 	}
 
 	return {

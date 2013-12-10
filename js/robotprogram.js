@@ -2,6 +2,27 @@ define([],
 function() {
 	var _anonBlockCount = 0;
 
+	//Verifiers
+	function _verifyVariableAssignment(type, value) {
+		switch (type) {
+			case "int": {
+
+			} break;
+
+			case "double": {
+
+			} break;
+
+			case "string": {
+
+			} break;
+
+			case "char": {
+
+			} break;
+		}
+	}
+
 	function _verifyProgram(program) {
 		var scope = {
 			variables: {},
@@ -66,6 +87,12 @@ function() {
 	function _verifyBlock(node, scope) {
 
 	}
+
+	function ProgramError(message, line, col) {
+		this.message = message;
+		this.line = line;
+		this.col = col;
+	}
 	
 	function RobotProgram(ast) {
 		var _ast = ast;
@@ -77,6 +104,27 @@ function() {
 		var scope = _verifyProgram(_ast);
 		console.log('Program Verification Complete');
 		console.log(scope);
+
+		var theScope = {
+			'print': {
+				type: 'function',
+				ref: [ {
+					execute: function(context) {
+						console.log(context['printString']);
+					}
+				}
+				],
+				parameters: [{
+					type: "string",
+					name: "printString",
+				}]
+			}
+		};
+
+		this.execute = function() {
+			_ast.execute(theScope);
+
+		};
 	}
 
 	return RobotProgram;

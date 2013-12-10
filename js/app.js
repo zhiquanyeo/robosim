@@ -133,6 +133,7 @@ function($, _, Robot, Field, RangeFinder,
                     }
                     */
                     var robotProgram = new RobotProgram(result);
+                    robotProgram.execute({});
                 }
                 catch (e) {
                     console.warn(e);
