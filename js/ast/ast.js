@@ -427,6 +427,8 @@ function(TypeChecker) {
 
 		this.execute = function(context) {
 			var leftVal, rightVal;
+			var commonType;
+
 			if (_left.nodeType === "Identifier") {
 				leftVal = _fetchFromContext(_left.execute(context), context, _left, _left.loc);
 			}
@@ -443,6 +445,7 @@ function(TypeChecker) {
 
 			//depending on what operator we have
 			switch (_operator) {
+				//=== Additive Operators
 				case "+":
 					//if both sides evaluate to the same type, then we're golden
 					if (typeof leftVal === typeof rightVal) {
@@ -452,8 +455,7 @@ function(TypeChecker) {
 						return leftVal + rightVal;
 					}
 					else {
-						//TODO: Implement 
-						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
 						if (commonType) {
 							return (TypeChecker.coerceValue(commonType, leftVal) + TypeChecker.coerceValue(commonType, rightVal));
 						}
@@ -474,10 +476,9 @@ function(TypeChecker) {
 						return leftVal - rightVal;
 					}
 					else {
-						//TODO: Implement 
-						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
 						if (commonType) {
-							if (commonType === "boolean") 
+							if (commonType === "boolean")
 								throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
 							if (commonType === "string")
 								throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
@@ -488,6 +489,8 @@ function(TypeChecker) {
 						}
 					}
 					break;
+
+				//=== Multiplicative Operators
 				case "*":
 					//if both sides evaluate to the same type, then we're golden
 					if (typeof leftVal === typeof rightVal) {
@@ -500,10 +503,9 @@ function(TypeChecker) {
 						return leftVal * rightVal;
 					}
 					else {
-						//TODO: Implement 
-						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
 						if (commonType) {
-							if (commonType === "boolean") 
+							if (commonType === "boolean")
 								throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
 							if (commonType === "string")
 								throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
@@ -526,14 +528,304 @@ function(TypeChecker) {
 						return leftVal / rightVal;
 					}
 					else {
-						//TODO: Implement 
-						var commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
 						if (commonType) {
-							if (commonType === "boolean") 
+							if (commonType === "boolean")
 								throw new InterpreterError("operator " + _operator + " is invalid for boolean values", this, _loc);
 							if (commonType === "string")
 								throw new InterpreterError("Cannot perform operation " + _operator + " on type string", this, _loc);
 							return (TypeChecker.coerceValue(commonType, leftVal) / TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case "%":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return leftVal % rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int" && commonType !== "double")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) % TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Shift Operators
+				case "<<":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return TypeChecker.coerceValue("int", leftVal) << TypeChecker.coerceValue("int", rightVal);
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) << TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case ">>":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return TypeChecker.coerceValue("int", leftVal) >> TypeChecker.coerceValue("int", rightVal);
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) >> TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case ">>>":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return TypeChecker.coerceValue("int", leftVal) >>> TypeChecker.coerceValue("int", rightVal);
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) >>> TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Relational Operators
+				case "<=":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						return leftVal <= rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) <= TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case ">=":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						return leftVal >= rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) >= TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case "<":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						return leftVal < rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) < TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case ">":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						return leftVal > rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) > TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Equality operators
+				case "===":
+				case "==":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						return leftVal == rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) == TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+				case "!==":
+				case "!=":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						return leftVal != rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) != TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Bitwise AND
+				case "&":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return TypeChecker.coerceValue("int", leftVal) & TypeChecker.coerceValue("int", rightVal);
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) & TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Bitwise XOR
+				case "^":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return TypeChecker.coerceValue("int", leftVal) ^ TypeChecker.coerceValue("int", rightVal);
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) ^ TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Bitwise OR
+				case "|":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return TypeChecker.coerceValue("int", leftVal) | TypeChecker.coerceValue("int", rightVal);
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							if (commonType !== "int")
+								throw new InterpreterError("Operator " + _operator + " is invalid for type " + commonType);
+
+							return (TypeChecker.coerceValue(commonType, leftVal) | TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Logical AND
+				case "&&":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return leftVal && rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) && TypeChecker.coerceValue(commonType, rightVal));
+						}
+						else {
+							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
+						}
+					}
+					break;
+
+				//=== Logical OR
+				case "||":
+					//if both sides evaluate to the same type, then we're golden
+					if (typeof leftVal === typeof rightVal) {
+						if (typeof leftVal !== "number") {
+							throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof leftVal), this, _loc);
+						}
+						return leftVal || rightVal;
+					}
+					else {
+						commonType = TypeChecker.greatestCommonType([leftVal, rightVal]);
+						if (commonType) {
+							return (TypeChecker.coerceValue(commonType, leftVal) || TypeChecker.coerceValue(commonType, rightVal));
 						}
 						else {
 							throw new InterpreterError("Could not obtain common type for types " + (typeof leftVal) + " and " + (typeof rightVal), this, _loc);
