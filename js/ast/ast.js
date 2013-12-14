@@ -876,6 +876,16 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function(context) {
+			//Left side is either Identifier, MemberExpression
+			if (_left.nodeType === "Identifier") {
+				if (context[_left.label] === undefined)
+					throw new InterpreterError("Could not find '" + _left.value + "' in current execution context", this, _loc);
+				context[_left.label].value = _right.execute(context);
+			}
+			//TODO need to implement MemberExpression
+		};
 	}
 
 	function LogicalExpression (logicalOp, left, right, loc) {
