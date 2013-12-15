@@ -8,13 +8,25 @@ function(TypeChecker) {
 	}
 
 	function _fetchFromContext(ident, context, callContext, loc) {
+		var val = _fetchFromContextRaw(ident, context, callContext, loc);
+		return val.value;
+	}
+
+	function _getValue(thing, context) {
+		if (thing.nodeType === "Identifier") {
+			return _fetchFromContext(thing.execute(context), context, thing, thing.loc);
+		}
+		return thing.execute(context);
+	}
+
+	function _fetchFromContextRaw(ident, context, callContext, loc) {
 		var ctx = context;
-		var value;
+		var retVal;
 		var found = false;
 		while (ctx) {
 			if (ctx[ident] !== undefined) {
-				console.log('found ' + ident + ' in context');
-				value = ctx[ident].value;
+				console.log("Found '" + ident + "' in context");
+				retVal = ctx[ident];
 				found = true;
 				break;
 			}
@@ -23,17 +35,21 @@ function(TypeChecker) {
 		}
 
 		if (!found) {
-			throw new InterpreterError("Could not find '" + ident + "' in current executing context", callContext, loc);
+			throw new InterpreterError("Could not find '" + ident + "' in current execution context", callContext, loc);
 		}
 
-		return value;
+		return retVal;
 	}
 
-	function _getValue(thing, context) {
-		if (thing.nodeType === "Identifier") {
-			return _fetchFromContext(thing.execute(context), context, thing, thing.loc);
+	function _setValue(thing, value, context) {
+		//TODO: how about array accessors? MemberExpression
+		if (thing.nodeType !== "Identifier") {
+			throw new InterpreterError("Invalid target of set value. Must be identifier or member expression", thing, thing.loc);
 		}
-		return thing.execute(context);
+
+		var contextEntry = _fetchFromContextRaw(thing.execute(context), context, thing, thing.loc);
+		console.log('contextEntry:', contextEntry);
+		contextEntry.value = value;
 	}
 
 	//Program
@@ -903,6 +919,13 @@ function(TypeChecker) {
 		});
 
 		this.execute = function(context) {
+			//Take into account the operator
+			if (_operator !== "=") {
+				var opToUse = _operator.substring(0, _operator.length - 1);
+				var newRight = new BinaryExpression(opToUse, _left, _right);
+				_right = newRight;
+			}
+
 			//Left side is either Identifier, MemberExpression
 			if (_left.nodeType === "Identifier") {
 				if (context[_left.label] === undefined)
@@ -1009,6 +1032,36 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function (context) {
+			//We can only increment/decrement numbers
+			var value;
+			if (_expression.nodeType === "Identifier") {
+				value = _getValue(_expression, context);
+			}
+			else {
+				value = _expression.execute(context);
+			}
+
+			if (!(TypeChecker.typeCheck("int", value) || TypeChecker.typeCheck("double", value))) {
+				throw new InterpreterError("Operator " + _operator + " is invalid for type " + (typeof value));
+			}
+
+			var returnVal = value;
+
+			if (_operator == "++") {
+				_setValue(_expression, value + 1, context);
+				if (_isPrefix)
+					returnVal = value + 1;
+			}
+			else if (_operator == "--") {
+				_setValue(_expression, value - 1, context);
+				if (_isPrefix)
+					returnVal = value - 1;
+			}
+
+			return returnVal;
+		};
 	}
 
 	function CallExpression (callee, args, loc) {
