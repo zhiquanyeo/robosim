@@ -193,6 +193,7 @@ function(TypeChecker) {
 				var variable = {
 					type: "variable",
 					varType: _type,
+					isArray: _isArray,
 				};
 
 				if (declarator.initializer !== undefined) {
@@ -205,15 +206,39 @@ function(TypeChecker) {
 					var value = _getValue(initializer, context);
 					console.log('value: ', value);
 
-					//Try to typecheck now
-					if (TypeChecker.typeCheck(_type, value)) {
-						value = TypeChecker.coerceValue(_type, value);
+					if (_isArray) {
+						//Handle the array case
+						if(value.length !== undefined) {
+							var arrayValues = value;
+							var tempArray = [];
+							for (var valIdx = 0, valLen = value.length; valIdx < valLen; valIdx++) {
+								var tmpVal = _getValue(arrayValues[valIdx], context);
+								// typecheck it
+								if (TypeChecker.typeCheck(_type, tmpVal)) {
+									tmpVal = TypeChecker.coerceValue(_type, tmpVal);
+								}
+								else {
+									throw new InterpreterError("Attempting to assign value of type '" + (typeof value) + "' to array variable of type '" + _type + "'", this, _loc);
+								}
+								tempArray.push(tmpVal);
+							}
+							variable.value = tempArray;
+						}
+						else {
+							throw new InterpreterError("Attempting to assign a non array type to an array variable", this, _loc);
+						}
 					}
 					else {
-						throw new InterpreterError("Attempting to assign value of type '" + (typeof value) + "' to variable of type '" + _type + "'");
+						//Try to typecheck now
+						if (TypeChecker.typeCheck(_type, value)) {
+							value = TypeChecker.coerceValue(_type, value);
+						}
+						else {
+							throw new InterpreterError("Attempting to assign value of type '" + (typeof value) + "' to variable of type '" + _type + "'", this, _loc);
+						}
+						console.log('after type coercion', value);
+						variable.value = value;
 					}
-					console.log('after type coercion', value);
-					variable.value = value;
 				}
 				else {
 					//sensible defaults
@@ -884,7 +909,21 @@ function(TypeChecker) {
 					throw new InterpreterError("Could not find '" + _left.value + "' in current execution context", this, _loc);
 				context[_left.label].value = _right.execute(context);
 			}
-			//TODO need to implement MemberExpression
+			else if (_left.nodeType === "MemberExpression") {
+				if (_left.base.nodeType === "Identifier") {
+					var baseVariable = _getValue(_left.base, context);
+					var property = _left.property;
+					var propVal;
+					if (property.nodeType === "Identifier") {
+						propVal = _getValue(property, context);
+					}
+					else {
+						propVal = property.execute();
+					}
+					baseVariable[propVal] = _right.execute(context);
+					
+				}
+			}
 		};
 	}
 
@@ -1008,7 +1047,16 @@ function(TypeChecker) {
 		this.execute = function(context) {
 			console.log('Executing CallExpression', _callee.execute());
 			var callee = _callee.execute();
-			var fn = context[callee];
+			var fn;
+			var ctx = context;
+			while (ctx) {
+				if (ctx[callee] !== undefined) {
+					fn = ctx[callee];
+					break;
+				}
+				ctx = ctx.__parentContext;
+			}
+			
 			if (fn && fn.type === "function") {
 				console.log('found the function');
 				console.log('args...');
@@ -1059,6 +1107,9 @@ function(TypeChecker) {
 					statement.execute(fnContext);
 					//statement.execute()
 				}
+			}
+			else {
+				throw new InterpreterError("Could not find function '" + callee + "' in currently executing context", this, _loc);
 			}
 		};
 	}
