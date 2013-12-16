@@ -52,11 +52,36 @@ function(TypeChecker) {
 	}
 
 	function _generateFunctionMemMap(functionDeclaration, heap) {
+		console.log('Generating function map for function ' + functionDeclaration.name);
+
+		var _params = {};
 		//Store arguments
 		for (var i = 0, len = functionDeclaration.parameters.length; i < len; i++) {
 			console.log('parameter ' + i, functionDeclaration.parameters[i]);
 			//each parameter is a VariableDeclaration
+			var param = functionDeclaration.parameters[i];
+			var paramType = param.type;
 
+			//TODO there seems to be a problem where the first parameter gets its name dropped.
+			for (var parIdx = 0, parLen = param.declarators.length; parIdx < parLen; parIdx++) {
+				var declarator = param.declarators[parIdx];
+				if (_params[declarator.name] !== undefined) {
+					throw new CompilerError("Parameter '" + declarator.name + "' has already been defined", declarator.loc);
+				}
+				_params[declarator.name] = {
+					type: paramType
+				};
+			}
+		}
+
+		//Go through the statements
+
+		for (var i = 0, len = functionDeclaration.body.length; i < len; i++) {
+			var funcStatement = functionDeclaration.body[i];
+			console.log('statement: ', funcStatement);
+
+			//If it's a variable declaration, make sure that it's not named the same as any of our parameters
+			
 		}
 	}
 
@@ -68,6 +93,8 @@ function(TypeChecker) {
 		var _data = {}; //Data segment, all global variables
 
 		var _functions = {};
+
+		//TODO: Inject built in functions
 
 		//we need to first insert all the function declarations
 		//First pass:
@@ -151,6 +178,10 @@ function(TypeChecker) {
 
 					_data[declarator.name] = variable;
 				}
+			}
+			else {
+				//Throw an error, we only support function declarations and variable declarations at the top level
+				throw new CompilerError("Top level of program can only contain function declarations or variable declarations", progStatement, progStatement.loc);
 			}
 		}
 	}
