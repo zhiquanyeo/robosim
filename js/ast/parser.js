@@ -8703,10 +8703,11 @@ function(AST) {
                     }
                     if (result0 !== null) {
                       result0 = (function(offset, line, column, statements) {
-                          return {
-                            type:       "Block",
-                            statements: statements !== null ? statements[0] : []
-                          };
+                          return new AST.blockStatement(statements !== null ? statements[0]:[], {line:line, column:column});
+                          // return {
+                          //   type:       "Block",
+                          //   statements: statements !== null ? statements[0] : []
+                          // };
                         })(pos0.offset, pos0.line, pos0.column, result0[2]);
                     }
                     if (result0 === null) {

@@ -127,6 +127,10 @@ function() {
 			_ast.execute(theScope);
 
 		};
+
+		this.abort = function () {
+			theScope.__abort = true;
+		};
 	}
 
 	return RobotProgram;

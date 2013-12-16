@@ -1,8 +1,8 @@
 define(['jquery', 'underscore',
     'robot', 'field', 'sensors/rangefinder',
-    'simulation', 'ast/ast', 'ast/parser', 'robotprogram'],
-function($, _, Robot, Field, RangeFinder, 
-    Simulation, AST, Parser, RobotProgram) {
+    'simulation', 'ast/ast', 'ast/parser', 'robotprogram', 'ast/compiler'],
+function($, _, Robot, Field, RangeFinder,
+    Simulation, AST, Parser, RobotProgram, Compiler) {
 
     var mouseDown = false;
     var lastY;
@@ -85,6 +85,7 @@ function($, _, Robot, Field, RangeFinder,
             var setSpeedBtn = document.getElementById('btnSetSpeed');
             var forwardBtn = document.getElementById('btnForward');
             var startStopBtn = document.getElementById('btnStartStop');
+            var abortButton = document.getElementById('btnAbort');
 
             //Simulation Setup
             var simulation = new Simulation(theField, robot);
@@ -118,25 +119,26 @@ function($, _, Robot, Field, RangeFinder,
                 }
             });
 
+            var robotProgram;
+
             forwardBtn.addEventListener('click', function() {
                 try {
                     var result = Parser.parse(editor.getSession().getValue());
-                    /*
-                    console.log('result: ', result, result.loc);
-                    console.log('program Statements');
-                    for (var i in result.statements) {
-                        var statement = result.statements[i];
-                        for (var j in statement) {
-                            console.log('--', j);
-                        }
-                        console.log('[' + i + ']', statement, statement.loc);
-                    }
-                    */
-                    var robotProgram = new RobotProgram(result);
-                    robotProgram.execute({});
+                    
+                    // robotProgram = new RobotProgram(result);
+                    // robotProgram.execute({});
+
+                    Compiler.compile(result);
                 }
                 catch (e) {
                     console.warn(e);
+                }
+            });
+
+            abortButton.addEventListener('click', function () {
+                if (robotProgram) {
+                    console.log('!!!!!! ABORTING PROGRAM !!!!!!!!');
+                    robotProgram.abort();
                 }
             });
         }

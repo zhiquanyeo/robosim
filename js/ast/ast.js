@@ -7,6 +7,21 @@ function(TypeChecker) {
 		this.loc = loc;
 	}
 
+	function ProgramAbortException(statement) {
+		this.statement = statement;
+	}
+
+	function _checkShouldContinueExecution(context) {
+		var ctx = context;
+		while(ctx) {
+			if (ctx.__abort) {
+				return false;
+			}
+			ctx = ctx.__parentContext;
+		}
+		return true;
+	}
+
 	function _fetchFromContext(ident, context, callContext, loc) {
 		var val = _fetchFromContextRaw(ident, context, callContext, loc);
 		return val.value;
@@ -52,6 +67,19 @@ function(TypeChecker) {
 		contextEntry.value = value;
 	}
 
+	function _existsInContext(thing, context) {
+		if (thing.nodeType === "Identifier") {
+			try {
+				_fetchFromContextRaw(thing.execute(context), context, null, null);
+				return true;
+			}
+			catch (e) {
+				return false;
+			}
+		}
+		return false;
+	}
+
 	//Program
 	function Program(statements, loc) {
 		var _statements = statements;
@@ -79,9 +107,13 @@ function(TypeChecker) {
 		});
 
 		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			//Loop through the statements
 			for (var i = 0, len = _statements.length; i < len; i++) {
 				var statement = _statements[i];
+				console.log('statement: ', statement);
 				if (!statement.execute) {
 					throw new InterpreterError("Statement does not implement execute()", statement, _loc);
 				}
@@ -142,6 +174,9 @@ function(TypeChecker) {
 
 		//All we need to do for a FunctionDeclaration is register it
 		this.execute = function (context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			//Check if this already exists in context
 			if (context[_name] !== undefined) {
 				throw new InterpreterError("'" + _name + "' already exists in execution context", this, _loc);
@@ -198,6 +233,9 @@ function(TypeChecker) {
 
 		//Register the variables in the context
 		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			//We need to parse the declarators
 			for (var i = 0, len = _declarators.length; i < len; i++) {
 				var declarator = _declarators[i];
@@ -467,6 +505,9 @@ function(TypeChecker) {
 		});
 
 		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			var leftVal, rightVal;
 			var commonType;
 
@@ -701,8 +742,10 @@ function(TypeChecker) {
 					}
 					break;
 				case "<":
+					console.log('Evaluating < ', leftVal, rightVal);
 					//if both sides evaluate to the same type, then we're golden
 					if (typeof leftVal === typeof rightVal) {
+						console.log('both sides have same type. returning ' + (leftVal < rightVal));
 						return leftVal < rightVal;
 					}
 					else {
@@ -919,6 +962,9 @@ function(TypeChecker) {
 		});
 
 		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			//Take into account the operator
 			if (_operator !== "=") {
 				var opToUse = _operator.substring(0, _operator.length - 1);
@@ -1034,6 +1080,9 @@ function(TypeChecker) {
 		});
 
 		this.execute = function (context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			//We can only increment/decrement numbers
 			var value;
 			if (_expression.nodeType === "Identifier") {
@@ -1098,6 +1147,9 @@ function(TypeChecker) {
 		});
 
 		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
 			console.log('Executing CallExpression', _callee.execute());
 			var callee = _callee.execute();
 			var fn;
@@ -1199,8 +1251,16 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function (context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
+			//TODO Implement
+		};
 	}
 
+	//TODO: Is this even used?
 	function ArrayExpression (elements, loc) {
 		var _elements = elements;
 		var _loc = loc;
@@ -1228,6 +1288,8 @@ function(TypeChecker) {
 	}
 
 	//Statements
+
+	//TODO Not used
 	function VariableStatement (variables, loc) {
 		//variables contains an array of variabledeclarations
 		var _variableDeclarations = variables;
@@ -1271,6 +1333,13 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
+			//Do nothing
+		};
 	}
 
 	function BlockStatement (body, loc) {
@@ -1297,8 +1366,28 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
+			console.log('executing block statement', this);
+			var ctx = {
+				__parentContext: context,
+			};
+
+			//execute the statements in the sub-context
+			for (var i = 0, len = _body.length; i < len; i++) {
+				var statement = _body[i];
+				if (!statement.execute) {
+					throw new InterpreterError("Statement does not contain execute method", statement, statement.loc);
+				}
+				statement.execute(ctx);
+			}
+		};
 	}
 
+	//TODO: Not used
 	function ExpressionStatement (expression, loc) {
 		var _expression = expression;
 		var _loc = loc;
@@ -1357,6 +1446,19 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function(context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
+			for (var i = 0, len = _body.length; i < len; i++) {
+				var statement = _body[i];
+				if (!statement.execute) {
+					throw new InterpreterError("Statement does not have an execute method", statement, statement.loc);
+				}
+				statement.execute(context);
+			}
+		};
 	}
 
 	function IfStatement (test, trueStatement, elseStatement, loc) {
@@ -1399,6 +1501,25 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function (context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
+			var conditionResult = _condition.execute(context);
+			if (!TypeChecker.typeCheck("boolean", conditionResult)) {
+				throw new InterpreterError("Condition does not resolve to boolean", _condition, _condition.loc);
+			}
+
+			if (conditionResult) {
+				_trueStatement.execute(context);
+			}
+			else {
+				if (_elseStatement) {
+					_elseStatement.execute(context);
+				}
+			}
+		};
 	}
 
 	function SwitchStatement (testExpr, cases, loc) {
@@ -1502,6 +1623,16 @@ function(TypeChecker) {
 			},
 			enumerable: true
 		});
+
+		this.execute = function (context) {
+			if (!_checkShouldContinueExecution(context)) {
+				throw new ProgramAbortException(this);
+			}
+			//TODO delay execution?
+			while (_condition.execute(context)) {
+				_body.execute(context);
+			}
+		};
 	}
 
 	function DoWhileStatement (body, test, loc) {
