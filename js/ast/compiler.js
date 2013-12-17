@@ -62,7 +62,6 @@ function(TypeChecker) {
 			var param = functionDeclaration.parameters[i];
 			var paramType = param.type;
 
-			//TODO there seems to be a problem where the first parameter gets its name dropped.
 			for (var parIdx = 0, parLen = param.declarators.length; parIdx < parLen; parIdx++) {
 				var declarator = param.declarators[parIdx];
 				if (_params[declarator.name] !== undefined) {

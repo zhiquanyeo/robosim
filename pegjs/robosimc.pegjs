@@ -1368,7 +1368,7 @@ FormalParameterList
          isArray: arrSpec  ? true : false,
       }];
       */
-      var declarator = AST.variableDeclarator(name, null, {line:line, column:column});
+      var declarator = AST.variableDeclarator(head, null, {line:line, column:column});
       var result = [AST.variableDeclaration(headType, arrSpec ? true:false, [declarator], {line:line, column:column})];
 
       for (var i = 0; i < tail.length; i++) {
