@@ -131,6 +131,16 @@ function() {
 		this.abort = function () {
 			theScope.__abort = true;
 		};
+
+		//========================================
+		//Experimentation with stepping through the AST structure
+
+		var __currentStatement = _ast;
+		var __nextStatement;
+
+		this.executeNext = function() {
+			
+		};
 	}
 
 	return RobotProgram;
