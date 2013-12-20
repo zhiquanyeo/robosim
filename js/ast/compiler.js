@@ -167,8 +167,18 @@ function(TypeChecker, AST) {
 		if (expr.nodeType === "BinaryExpression") {
 			//base case: 2 literals
 			if (expr.left.nodeType === "Literal" && expr.right.nodeType === "Literal") {
+				var type = TypeChecker.greatestCommonType([expr.left.value, expr.right.value]);
+				if (type == "int" || type == "double")
+					type = "NumericLiteral";
+				else if (type == "string")
+					type = "StringLiteral";
+				else if (type == "boolean")
+					type = "BooleanLiteral";
+
 				//Return a literal node
+				return new AST.literal(expr.execute(), type, expr.loc);
 			}
+			
 		}
 	}
 
