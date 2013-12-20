@@ -1,5 +1,5 @@
-define(['./typechecker'],
-function(TypeChecker) {
+define(['./typechecker', './ast'],
+function(TypeChecker, AST) {
 	//Errors
 	function CompilerError(message, loc) {
 		this.message = message;
@@ -9,13 +9,15 @@ function(TypeChecker) {
 
 	//The Program object
 	function Program() {
-		var _pc = 0; //Program Counter
-		var _sp = 0;
+		var _eip = 0; //instruction pointer
+		var _esp = 0; //stack pointer
+		var _ebp = 0; //base pointer
 
-		var stack = [];
-		var heap = [];
+		var _eax = null; //EAX register
 
+		var _stack = [];
 
+		var _progmem = [];
 	}
 
 	function _fetchFromContext(ident, context, loc) {
@@ -54,68 +56,151 @@ function(TypeChecker) {
 	function _generateFunctionMemMap(functionDeclaration, heap) {
 		console.log('Generating function map for function ' + functionDeclaration.name);
 
-		var _params = {};
-		var _funcContext = {};
+		//This will also check for lexical scope
+		/* 
+		Mode of operation
 
-		var _functionStack = []; //This is the stack for the function
-		var _variableToStackPosition = {}; //Indexing into the stack
+		BlockStatements, and other related things will push and pop stuff onto/off the stack
+		
+		We first assemble a basic context (for checking), by inserting all the parameters. Then run
+		through all statements 
 
-		//Store arguments
+		ALWAYS REMEMBER: parameters are pushed onto the stack in REVERSE ORDER
+		*/
+
+		var context = {};
+		var stackOffset = {};
+		var ebpOffset = {};
+
+		var memMap = [];
+
+		var numParams = functionDeclaration.parameters.length;
+
+		//Store the arguments in context
 		for (var i = 0, len = functionDeclaration.parameters.length; i < len; i++) {
-			console.log('parameter ' + i, functionDeclaration.parameters[i]);
-			//each parameter is a VariableDeclaration
+			console.log('\tParameter [' + i + ']: ', functionDeclaration.parameters[i]);
 			var param = functionDeclaration.parameters[i];
 			var paramType = param.type;
 
-			for (var parIdx = 0, parLen = param.declarators.length; parIdx < parLen; parIdx++) {
-				var declarator = param.declarators[parIdx];
-				if (_params[declarator.name] !== undefined) {
-					throw new CompilerError("Parameter '" + declarator.name + "' has already been defined", declarator.loc);
-				}
-				_params[declarator.name] = {
-					type: "variable",
-					varType: paramType,
-				};
-				_funcContext[declarator.name] = {
-					type: "variable",
-					varType: paramType,
-				}
-
-				//allocate space on the stack
-				var newIdx = (_functionStack.push({name: declarator.name, type: paramType, value:undefined})) - 1;
-				_variableToStackPosition[declarator.name] = newIdx;
+			//there really should only be ONE declarator
+			var declarator = param.declarators[0];
+			if (context[declarator.name] !== undefined) {
+				throw new CompilerError("Parameter '" + declarator.name + "' has already been defined", declarator.loc);
 			}
+			context[declarator.name] = {
+				type: 'parameter',
+				varType: paramType
+			};
+
+			//These do not go on the stack, instead they are EBP offsets
+			ebpOffset[declarator.name] = -(i + 1); //1 slot reserved for return address
 		}
 
-		//Go through the statements
+		//Look for any local variables
+		//These will be stored at EBP + whatever
 
+		//Support function
+		function _storeVarInContext(variable, ctx) {
+			if (ctx[variable.name] !== undefined) {
+				throw new CompilerError("Variable '" + variable.name + "' has already been defined", variable.ref.loc);
+			}
+
+			ctx[variable.name] = {
+				type: "variable",
+				varType: variable.varType,
+			};
+		}
+
+		var toInit = []; //store any initialization things that we need to do
+		var localVarEbpOffset = 0;
 		for (var i = 0, len = functionDeclaration.body.length; i < len; i++) {
 			var funcStatement = functionDeclaration.body[i];
-			console.log('statement: ', funcStatement);
-
-			//If it's a variable declaration, make sure that it's not named the same as any of our parameters
 			if (funcStatement.nodeType === "VariableDeclaration") {
-				_getVariableInfo(funcStatement, _funcContext);
+				//console.log("\tProcessing variable declaration statement");
+				var variables = _getVariables(funcStatement);
+				//console.log("\tvariables: ", variables);
 
+				for (var j = 0, len2 = variables.length; j < len2; j++) {
+					//Attempt to store in context
+					var variable = variables[j];
+					_storeVarInContext(variable, context);
+
+					//If we got here, we're fine
+					ebpOffset[variable.name] = ++localVarEbpOffset;
+					if (variable.initializer) {
+						toInit.push({
+							name: variable.name,
+							initializer: variable.initializer
+						});
+					}
+				}
 			}
 		}
 
-		/*
-		Compiling a function
-		- all statements get their own index in the memory map
-		- MUST be converted into a form that can be run by the "RobotProcessor"
-		- usually of the form: 
-			{
-				statementType: VARIABLE_DECLARATION | STATEMENT | FUNCTION_CALL | RETURN,
-				execute: a function to run when this statement is hit
+		console.log("\tContext: ", context);
+		console.log("\tEBP Offsets: ", ebpOffset);
+		console.log('\tOutstanding initializations: ', toInit);
+
+
+		//Generate the memory map
+		for (var i = 0, len = functionDeclaration.body.length; i < len; i++) {
+			var statement =functionDeclaration.body[i];
+
+			//Ignore VariableDeclaration
+			if (statement.nodeType === "VariableDeclaration") {
+				continue;
 			}
-		*/
+			
+			console.log("\tProcessing statement: ", statement);
+
+
+		}
+
+		// === Process initializers
+
+		
+		console.log("========================================================\n\n");
+	}
+
+	//Simplify expressions. returns an expression
+	function _simplifyExpression (expr) {
+		if (expr.nodeType === "BinaryExpression") {
+			//base case: 2 literals
+			if (expr.left.nodeType === "Literal" && expr.right.nodeType === "Literal") {
+				//Return a literal node
+			}
+		}
+	}
+
+	//This function will ONLY extract variables, types, and initializer values. It will NOT care if 
+	//something is already defined
+	function _getVariables (varDecl) {
+		var variables = [];
+		if (varDecl.nodeType == "VariableDeclaration") {
+			
+			for (var i = 0, len = varDecl.declarators.length; i < len; i++) {
+				var declarator = varDecl.declarators[i];
+
+				var variable = {
+					type: 'variable',
+					name: declarator.name,
+					ref: declarator,
+					varType: varDecl.type,
+					isArray: varDecl.isArray,
+					initializer: declarator.initializer,
+				};
+
+				variables.push(variable);
+			}
+		}
+
+		return variables;
 	}
 
 	//Simply extract a list of variables and types from a variable declaration
 	//Will also store the variables in context
 	//about damn time i wrote this....
-	function _getVariableInfo (varDecl, context, doNotStore) {
+	function _getVariableInfo (varDecl, context) {
 		if (varDecl.nodeType !== "VariableDeclaration") {
 			throw new CompilerError("Trying to obtain variable declaration information from a non-VariableDeclaration type", varDecl.loc);
 		}
@@ -184,9 +269,8 @@ function(TypeChecker) {
 						break;
 				}
 			}
-			if (!doNotStore) {
-				context[declarator.name] = variable;
-			}
+			context[declarator.name] = variable;
+			
 			retVariables[declarator.name] = variable;
 		}
 
