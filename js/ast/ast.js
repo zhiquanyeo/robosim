@@ -1901,6 +1901,10 @@ function(TypeChecker) {
 		this.execute = function(context) {
 			return _label;
 		};
+
+		this.cfold = function() {
+			return this;
+		}.bind(this);
 	}
 
 	function Literal (value, type, loc) {
@@ -1939,6 +1943,10 @@ function(TypeChecker) {
 		this.execute = function() {
 			return _value;
 		};
+
+		this.cfold = function() {
+			return this;
+		}.bind(this);
 	}
 
 	return {

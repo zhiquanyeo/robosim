@@ -31,27 +31,30 @@ function(TypeChecker, AST) {
 	}
 
 	//Instructions
-	function ADDInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function ADDInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'ADD';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -61,27 +64,30 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function SUBInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function SUBInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'SUB';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -91,27 +97,30 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function MULInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function MULInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'MUL';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -121,27 +130,30 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function DIVInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function DIVInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'DIV';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -151,27 +163,30 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function ANDInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function ANDInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'AND';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -181,27 +196,30 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function ORInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function ORInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'OR';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -211,27 +229,30 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function XORInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function XORInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'XOR';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -241,19 +262,29 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function INCInstruction(dest) {
-		var _dest = dest;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
+	function INCInstruction(dest, executionUnit, comment) {
+		this.destination = dest;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'INC';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -263,19 +294,29 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function DECInstruction(dest) {
-		var _dest = dest;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
+	function DECInstruction(dest, executionUnit, comment) {
+		this.destination = dest;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'DEC';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -285,7 +326,7 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function RJMPInstruction(k) {
+	function RJMPInstruction(k, executionUnit, comment) {
 		var _offset = k;
 
 		Object.defineProperty(this, 'offset', {
@@ -302,12 +343,29 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
 			return "RJMP " + this.destination;
 		}.bind(this);
 	}
 
-	function JMPInstruction(k) {
+	function JMPInstruction(k, executionUnit, comment) {
 		var _offset = k;
 
 		Object.defineProperty(this, 'offset', {
@@ -324,12 +382,29 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
 			return "JMP " + this.destination;
 		}.bind(this);
 	}
 
-	function CALLInstruction(k) {
+	function CALLInstruction(k, executionUnit, comment) {
 		var _offset = k;
 
 		Object.defineProperty(this, 'offset', {
@@ -346,15 +421,49 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
 			return "CALL " + this.destination;
 		}.bind(this);
 	}
 
-	function RETInstruction() {
+	function RETInstruction(executionUnit, comment) {
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'RET';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -365,27 +474,30 @@ function(TypeChecker, AST) {
 	}
 
 	//Compare
-	function CPInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function CPInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'CP';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
 			},
 			enumerable: true,
 		});
@@ -395,23 +507,9 @@ function(TypeChecker, AST) {
 		}.bind(this);
 	}
 
-	function MOVInstruction(dest, src) {
-		var _dest = dest;
-		var _src = src;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function MOVInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
@@ -420,21 +518,31 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
-			return "MOV " + this.destination + ", " + this.source;
+			return "MOV " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
-	function LDIInstruction(dest, value) {
-		var _dest = dest;
+	function LDIInstruction(dest, value, executionUnit, comment) {
+		this.destination = dest;
 		var _value = value;
-
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
 
 		Object.defineProperty(this, 'value', {
 			get: function() {
@@ -450,20 +558,30 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
 			return "LDI " + this.destination + ", " + this.value;
 		}.bind(this);
 	}
 
-	function PUSHInstruction(src) {
-		var _src = src;
-
-		Object.defineProperty(this, 'source', {
-			get: function() {
-				return _src;
-			},
-			enumerable: true
-		});
+	function PUSHInstruction(src, executionUnit, comment) {
+		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
@@ -472,13 +590,30 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
-			return "PUSH " + this.source;
+			return "PUSH " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
-	function POPInstruction(dest) {
-		var _dest = dest;
+	function POPInstruction(dest, executionUnit, comment) {
+		this.destination = dest;
 
 		Object.defineProperty(this, 'destination', {
 			get: function() {
@@ -494,17 +629,51 @@ function(TypeChecker, AST) {
 			enumerable: true,
 		});
 
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
 		this.toString = function() {
 			return "POP " + this.destination;
 		}.bind(this);
 	}
 
-	function NOPInstruction() {
+	function NOPInstruction(executionUnit, comment) {
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'NOP';
 			},
 			enumerable: true
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
 		});
 
 		this.toString = function() {
@@ -706,11 +875,89 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileExpression (statement, context) {
+		//The idea is that the result will always be stored in R0
+		console.log('compiling expression', statement);
+		var map = [];
 
+		//do the operation and push the result on to the stack
+		//if (statement.nodeType )
 	}
 
 	function _compileAssignment (statement, context) {
+		console.log('compiling assignment expression: ', statement);
 
+		var map = [];
+
+		//verify that we have an appropriate left side
+		if (statement.left.nodeType !== "Identifier" && statement.left.nodeType !== "MemberExpression") {
+			throw new CompilerError("Left hand side of assignment expression must be a variable or array member", statement.loc);
+		}
+
+		var storageLocation = {};
+		if (statement.left.nodeType === "Identifier") {
+			//attempt to query the context
+			_getRawFromContext(statement.left.label, context, statement.left.loc);
+			storageLocation.name = statement.left.label;
+		}
+		else {
+			//member expression
+			//we only support single dimensional arrays
+			if (statement.left.base.nodeType !== "Identifier") {
+				throw new CompilerError("Only single dimensional arrays are supported", statement.left.base.loc);
+			}
+			var data = _getRawFromContext(statement.left.base, context, statement.left.base.loc);
+			if (!data.isArray) {
+				throw new CompilerError("'" + statement.left.base.label + "' is not an array and does not support indexing", statement.left.base.loc);
+			}
+			storageLocation.name = statement.left.base.label;
+
+			//TODO Implement
+			//Ugh we have to evaluate the location
+			//store it in R7
+			//storageLocation.index = 
+		}
+
+		//simplify the right side expression
+		var newRight = statement.right;
+		if (statement.right.cfold) {
+			newRight = statement.right.cfold();
+		}
+		console.log('newRight: ', newRight);
+
+		//if it's a literal, we just need to do the assignment
+		if (newRight.nodeType === "Literal") {
+			//Generate a MOV command, with storageLocation as the destination
+			
+			map.push(new MOVInstruction({
+				type: 'pendingVariable', //This tells the compiler that we still need to resolve this
+				value: storageLocation,
+			}, {
+				type: 'raw',
+				value: newRight.value
+			}, statement.right, "Store value in variable '" + storageLocation.name + "'"));
+		}
+		else if (newRight.nodeType === "Identifier") {
+			//ensure that the identifier exists
+			_getRawFromContext(newRight.label, context, statement.right.loc);
+			map.push(new MOVInstruction({
+				type: 'pendingVariable',
+				value: storageLocation,
+			}, {
+				type: 'pendingVariable',
+				value: {
+					name: newRight.label
+				}
+			}, statement.right, "Store variable '" + newRight.label + "' in variable '" + storageLocation.name + "'"));
+		}
+		else {
+			var expressionMap = _compileExpression(newRight, context);
+			map = map.concat(expressionMap);
+		}
+
+		//will need to set up place holders for the variable locations
+
+
+		return map;
 	}
 
 	function _compileForLoop (statement, context) {
@@ -743,6 +990,7 @@ function(TypeChecker, AST) {
 			__parentContext: context,
 		};
 
+		var varmap = []; //use this to store the variables first. These are the first instructions to get run
 		var memmap = [];
 
 		var paramList = [];
@@ -797,26 +1045,54 @@ function(TypeChecker, AST) {
 								basePointerOffsets[ctxItem.name] = bpOffset++;
 								//It's a new variable we are declaring
 								//push onto the stack
-								var instruction;
-								if (ctxItem.initializer) {
-									if (ctxItem.initializer.nodeType === "Literal") {
-										instruction = new LDIInstruction('R1', ctxItem.initializer.value);
-										memmap.push(instruction);
-										instruction = new PUSHInstruction('R1');
-									}
-								}
-								instruction = new PUSHInstruction()
+								//we can just save the value...
+								varmap.push(new PUSHInstruction({
+									type: 'raw',
+									value: ctxItem.value
+								}, statement, 'Set up space for variable \'' + ctxItem.name + '\' on stack'));
 							}
 						}
 					}
 
 				}
+				else if (statement.nodeType === "AssignmentExpression") {
+					var assignmentMap = _compileAssignment(statement, functionContext);
+					console.log('assignmentMap: ', assignmentMap);
+					memmap = memmap.concat(assignmentMap);
+				}
+			}
+		}
 
+		memmap = varmap.concat(memmap);
+
+		//loop through the map and find anything with pendingVariable
+		for (var i = 0, len = memmap.length; i < len; i++) {
+			var stmt = memmap[i];
+			if (stmt.destination) {
+				if (stmt.destination.type === 'pendingVariable') {
+					//grab ebp offset
+					var ebpOffset = basePointerOffsets[stmt.destination.value.name];
+					stmt.destination.type = 'pointer';
+					stmt.destination.value = 'EBP';
+					stmt.destination.offset = ebpOffset;
+				}
+			}
+			if (stmt.source) {
+				if (stmt.source.type === 'pendingVariable') {
+					//grab ebp offset
+					var ebpOffset = basePointerOffsets[stmt.source.value.name];
+					stmt.source.type = 'pointer';
+					stmt.source.value = 'EBP';
+					stmt.source.offset = ebpOffset;
+				}
 			}
 		}
 
 		console.log('Function Context: ', functionContext);
 		console.log("Base Pointer Offsets: ", basePointerOffsets);
+		console.log('memmap: ', memmap);
+
+		_printAssembly(memmap);
 	}
 
 	function _compile (programAST) {
@@ -848,6 +1124,30 @@ function(TypeChecker, AST) {
 
 		//This stores global scope!
 		console.log("Context: ", _context);
+	}
+
+	function _generateTargetString(obj) {
+		if (obj.type === 'raw') {
+			return obj.value;
+		}
+		else if (obj.type === 'register') {
+			return obj.value;
+		}
+		else if (obj.type === 'pointer') {
+			return obj.value + (obj.offset >= 0 ? '+' : '') + obj.offset;
+		}
+	}
+
+	function _printAssembly (memmap) {
+		console.log('=== ASSEMBLY INSTRUCTIONS ===');
+		for (var i = 0, len = memmap.length; i < len; i++) {
+			var statement = memmap[i];
+			var str = statement.toString();
+			if (statement.comment) {
+				str += " ; " + statement.comment;
+			}
+			console.log(str);
+		}
 	}
 
 	return {
