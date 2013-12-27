@@ -137,9 +137,28 @@ function() {
 
 		var __currentStatement = _ast;
 		var __nextStatement;
+		var __returnLocation;
+		var __returnVal;
 
 		this.executeNext = function() {
-			
+			if (!__currentStatement) {
+				console.warn("No more statements to process");
+				return;
+			}
+
+			// Handle the different cases
+			//Special case for Program, just jump right in
+			if (__currentStatement.nodeType === "Program") {
+				__currentStatement = __currentStatement.statements[0];
+				__nextStatement = __currentStatement.statements[1];
+			}
+
+			//If it's a function declaration, just execute the entire thing
+			if (__currentStatement.nodeType === "FunctionDeclaration" ||
+				__currentStatement.nodeType === "VariableDeclaration") {
+				__currentStatement.execute(theScope);
+				__currentStatement = __nextStatement;
+			}
 		};
 	}
 

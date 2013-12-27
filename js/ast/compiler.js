@@ -7,13 +7,26 @@ function(TypeChecker, AST) {
 		this.errorType = "CompilerError";
 	}
 
+	/*
+	Virtual machine instructions
+	PUSH <location>/<value>
+	POP <location>
+	CALL <fn location> -> resolves to ... followed by JMP
+	JMP <location>
+
+	*/
+
+	var _tempVarCounter = 0;
+
 	//The Program object
 	function Program() {
 		var _eip = 0; //instruction pointer
 		var _esp = 0; //stack pointer
 		var _ebp = 0; //base pointer
 
-		var _eax = null; //EAX register
+		var _eax = null; //EAX register, for storing return values
+		//Other registers (6)
+		//ra, rb, rc, rd, re, rf
 
 		var _stack = [];
 
@@ -111,6 +124,8 @@ function(TypeChecker, AST) {
 			};
 		}
 
+		// INVARIANT: Variables MUST be declared before they are referenced
+
 		var toInit = []; //store any initialization things that we need to do
 		var localVarEbpOffset = 0;
 		for (var i = 0, len = functionDeclaration.body.length; i < len; i++) {
@@ -134,6 +149,10 @@ function(TypeChecker, AST) {
 						});
 					}
 				}
+			}
+			else if (funcStatement.nodeType === "BinaryExpression") {
+				var instructions = _evalExpression(funcStatement, ebpOffset, true);
+				_prettyPrintInstructions(instructions);
 			}
 		}
 
@@ -162,7 +181,171 @@ function(TypeChecker, AST) {
 		console.log("========================================================\n\n");
 	}
 
+	function _prettyPrintInstructions(instructions) {
+		for (var i = 0, len = instructions.length; i < len; i++) {
+			var instr = instructions[i];
+			var str = instr.type + " ";
+
+			if (instr.type === "STORE") {
+				str += instr.location + " ";
+				if (instr.value.type === "raw") {
+					str += instr.value.value;
+				}
+				else if (instr.value.type === "offset") {
+					str += "[" + instr.value.base + (instr.value.offset >= 0 ? "+" : "") + instr.value.offset + "]";
+				}
+			}
+			else if (instr.type === "ADD" || instr.type === "MUL") {
+				str += instr.location + " ";
+				if (instr.value.type === "raw") {
+					str += instr.value.value;
+				}
+				else if (instr.value.type === "register") {
+					str += instr.value.base;
+				}
+				else if (instr.value.type === "offset") {
+					str += "[" + instr.value.base + (instr.value.offset >= 0 ? "+" : "") + instr.value.offset + "]";
+				}
+			}
+
+			console.log(str);
+		}
+	}
+
+	//Convert an expression into memory map format
+	//(break down into individual ops)
+	//Left side, stored in RA, right side and evaled in RB
+	function _evalExpression (expr, ebpOffsets, isTopLevel) {
+		var instructions = [];
+
+		//Evaluate the left
+		if (expr.left.nodeType == "Literal") {
+			//Generate a STORE command
+			instructions.push({
+				type: 'STORE',
+				location: 'RA',
+				value: {
+					type: 'raw',
+					value: expr.left.value,
+				}
+			});
+		}
+		else if (expr.left.nodeType == "Identifier") {
+			//Attempt to load from ebpOffset
+			if (ebpOffsets[expr.left.label] === undefined) {
+				throw new CompilerError("'" + expr.left.label + "' is not defined in current context", expr.left.loc);
+			}
+			instructions.push({
+				type: 'STORE',
+				location: 'RA',
+				value: {
+					type: 'offset',
+					base: 'ebp',
+					offset: ebpOffsets[expr.left.label]
+				}
+			});
+		}
+		else {
+			//set instructions to point at whatever array was returned by eval-ing
+			instructions = _evalExpression(expr.left, ebpOffsets);
+		}
+
+		//Now do the right side
+		if (expr.right.nodeType == "Literal") {
+			instructions.push({
+				type: 'STORE',
+				location: 'RB',
+				value: {
+					type: 'raw',
+					value: expr.right.value
+				}
+			});
+		}
+		else if (expr.right.nodeType == "Identifier") {
+			if (ebpOffsets[expr.right.label] === undefined)
+				throw new CompilerError("'" + expr.right.label + "' is not defined in current context", expr.right.loc);
+
+			instructions.push({
+				type: 'STORE',
+				location: 'RB',
+				value: {
+					type: 'offset',
+					base: 'ebp',
+					offset: ebpOffsets[expr.right.label]
+				}
+			});
+		}
+		else {
+			instructions = instructions.concat(_evalExpression(expr.right, ebpOffsets));
+		}
+
+		var tempvarName;
+		if (!isTopLevel) {
+			tempvarName = '__tempVar' + (_tempVarCounter++);
+			//initialize a temp variable to hold this
+			instructions.push({
+				type: 'STORE',
+				location: {
+					type: 'tempvar',
+					name: tempvarName
+				},
+				value: {
+					type: 'register',
+					base: 'RB'
+				}
+			});
+		}
+
+		//do the op
+		var op;
+		switch (expr.operator) {
+			case "+":
+				instructions.push({
+					type: 'ADD',
+					location: (isTopLevel ? 'RA' : {type:'tempvar', name: tempvarName}),
+					value: {
+						type: 'register',
+						base: 'RB'
+					}
+				});
+				break;
+			case "*":
+				instructions.push({
+					type: 'MUL',
+					location: (isTopLevel ? 'RA' : {type:'tempvar', name: tempvarName}),
+					value: {
+						type: 'register',
+						base: 'RB'
+					}
+				});
+				break;
+		}
+
+		return instructions;
+	}
+
+	//Flatten out an expression
+	//series of steps that are done in sequence
+	//must maintain mathematical ordering
+	function _flattenExpression (expr) {
+		var steps = [];
+
+		//Do a DFS
+		//we also need to indicate that we need to store intermediate results
+		var exp = expr;
+		var prev = expr;
+
+		//All left side expressions will be evaled and stored in RA
+		//All right side expressions will be eval-ed and stored in RB
+		while (exp) {
+			if (exp.left && exp.right) {
+
+			}
+		}
+	}
+
 	//Simplify expressions. returns an expression
+	//TERMINALS are Literal and Identifier
 	function _simplifyExpression (expr) {
 		if (expr.nodeType === "BinaryExpression") {
 			//base case: 2 literals
@@ -178,7 +361,16 @@ function(TypeChecker, AST) {
 				//Return a literal node
 				return new AST.literal(expr.execute(), type, expr.loc);
 			}
-			
+			else if (expr.left.nodeType === "Literal") {
+				var newRight = _simplifyExpression(right);
+				return _simplifyExpression(new AST.binaryExpression(expr.operator, expr.left, newRight, expr.loc));
+			}
+			else if (expr.right.nodeType === "Literal") {
+
+			}
+			else {
+				//Both sides are expressions
+			}
 		}
 	}
 

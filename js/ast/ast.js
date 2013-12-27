@@ -504,6 +504,98 @@ function(TypeChecker) {
 			enumerable: true
 		});
 
+		//Implement constant folding
+		this.cfold = function () {
+			//Build the new left node by cfolding
+			var newLeft, newRight;
+			if (_left.cfold !== undefined) {
+				newLeft = _left.cfold();
+			}
+			else {
+				newLeft = _left;
+			}
+
+			if (_right.cfold !== undefined) {
+				newRight = _right.cfold();
+			}
+			else {
+				newRight = _right;
+			}
+
+			//Only do stuff for the basic arithmetic ops
+			switch (_operator) {
+				case "+":
+					if (newLeft.nodeType === "Literal" && newRight.nodeType === "Literal") {
+						//if both are numbers, do the addition
+						if (newLeft.type === "NumericLiteral" && newRight.type === "NumericLiteral") {
+							return new Literal(newLeft.value + newRight.value, "NumericLiteral", _loc);
+						}
+						//if either of them is a string, convert to a string and return a string literal
+						if (newLeft.type === "StringLiteral" || newRight.type === "StringLiteral") {
+							return new Literal(newLeft.value.toString() + newRight.value.toString(), "StringLiteral", _loc);
+						}
+					}
+					else if (newLeft.nodeType === "Literal" && newLeft.type === "NumericLiteral" && newLeft.value === 0) {
+						return newRight;
+					}
+					else if (newRight.nodeType === "Literal" && newRight.type === "NumericLiteral" && newRight.value === 0) {
+						return newLeft;
+					}
+					break;
+				case "-":
+					if (newLeft.nodeType === "Literal" && newRight.nodeType === "Literal") {
+						//if both are numbers, do the addition
+						if (newLeft.type === "NumericLiteral" && newRight.type === "NumericLiteral") {
+							return new Literal(newLeft.value - newRight.value, "NumericLiteral", _loc);
+						}
+					}
+					else if (newLeft.nodeType === "Literal" && newLeft.type === "NumericLiteral" && newLeft.value === 0) {
+						return new UnaryExpression("-", newRight, true, _loc);
+					}
+					else if (newRight.nodeType === "Literal" && newRight.type === "NumericLiteral" && newRight.value === 0) {
+						return newLeft;
+					}
+					break;
+				case "*":
+					if (newLeft.nodeType === "Literal" && newRight.nodeType === "Literal") {
+						//if both are numbers, do the addition
+						if (newLeft.type === "NumericLiteral" && newRight.type === "NumericLiteral") {
+							return new Literal(newLeft.value * newRight.value, "NumericLiteral", _loc);
+						}
+					}
+					else if (newLeft.nodeType === "Literal" && newLeft.type === "NumericLiteral" && newLeft.value === 0) {
+						return new Literal(0, "NumericLiteral", _loc);
+					}
+					else if (newRight.nodeType === "Literal" && newRight.type === "NumericLiteral" && newRight.value === 0) {
+						return new Literal(0, "NumericLiteral", _loc);
+					}
+					else if (newLeft.nodeType === "Literal" && newLeft.type === "NumericLiteral" && newLeft.value === 1) {
+						return newRight;
+					}
+					else if (newRight.nodeType === "Literal" && newRight.type === "NumericLiteral" && newRight.value === 1) {
+						return newLeft;
+					}
+					break;
+				case "/":
+					if (newLeft.nodeType === "Literal" && newRight.nodeType === "Literal") {
+						//if both are numbers, do the addition
+						if (newLeft.type === "NumericLiteral" && newRight.type === "NumericLiteral") {
+							return new Literal(newLeft.value / newRight.value, "NumericLiteral", _loc);
+						}
+					}
+					else if (newLeft.nodeType === "Literal" && newLeft.type === "NumericLiteral" && newLeft.value === 0) {
+						return new Literal(0, "NumericLiteral", _loc);
+					}
+					break;
+			}
+
+			//If all else fails, return this thing with newLeft and newRight
+			_left = newLeft;
+			_right = newRight;
+			return this;
+
+		}.bind(this);
+
 		this.execute = function(context) {
 			if (!_checkShouldContinueExecution(context)) {
 				throw new ProgramAbortException(this);

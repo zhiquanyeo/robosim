@@ -4,6 +4,17 @@ function() {
 		this.message = message;
 	}
 
+	function isCoercableType(refType, testType) {
+		switch (refType) {
+			case "int":
+			case "double":
+			case "boolean":
+				return (testType === "int" || testType == "double" || testType == "boolean");
+			case "string":
+				return true;
+		}
+	}
+
 	//'value' will always be a simple type (number, string, boolean)
 	function typeCheck (type, value) {
 		switch (type) {
@@ -51,7 +62,7 @@ function() {
 
 			if (typeof val === "number") {
 				//we need to differentiate
-				var intVal = parseInt(val);
+				var intVal = parseInt(val, 10);
 				var floatVal = parseFloat(val);
 
 				if (intVal == floatVal) {
@@ -61,7 +72,7 @@ function() {
 					hasDouble = true;
 				}
 			}
-			else if (typeof val === "string") 
+			else if (typeof val === "string")
 				hasString = true;
 			else if (typeof val === "boolean")
 				hasBoolean = true;
@@ -82,7 +93,7 @@ function() {
 		if (hasInt && !hasDouble && !hasString) //we can convert bool/int -> int
 			return "int";
 		if (hasBoolean && !hasString) // we can convert int/double/bool -> bool
-			return "boolean"
+			return "boolean";
 		if (hasString)
 			return "string";
 		else
@@ -94,5 +105,6 @@ function() {
 		typeCheck: typeCheck,
 		coerceValue: coerceValue,
 		greatestCommonType: greatestCommonType,
+		isCoercableType: isCoercableType,
 	};
 });

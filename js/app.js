@@ -1,8 +1,10 @@
 define(['jquery', 'underscore',
     'robot', 'field', 'sensors/rangefinder',
-    'simulation', 'ast/ast', 'ast/parser', 'robotprogram', 'ast/compiler'],
+    'simulation', 'ast/ast', 'ast/parser', 'robotprogram', 'ast/compiler',
+    'ast/compiler2'],
 function($, _, Robot, Field, RangeFinder,
-    Simulation, AST, Parser, RobotProgram, Compiler) {
+    Simulation, AST, Parser, RobotProgram, Compiler,
+    Compiler2) {
 
     var mouseDown = false;
     var lastY;
@@ -121,6 +123,15 @@ function($, _, Robot, Field, RangeFinder,
 
             var robotProgram;
 
+            //EXPERIMENT
+            var expression = "2 * a + 0 * 2";
+            var result = Parser.parse(expression);
+            console.log('Expression: ', expression);
+            console.log('Before cfolding', result);
+            var newResult = result.statements[0].cfold();
+            console.log('after cfolding', newResult);
+            //END EXPERIMENT
+
             forwardBtn.addEventListener('click', function() {
                 try {
                     var result = Parser.parse(editor.getSession().getValue());
@@ -128,9 +139,13 @@ function($, _, Robot, Field, RangeFinder,
                     // robotProgram = new RobotProgram(result);
                     // robotProgram.execute({});
 
-                    Compiler.compile(result);
+                    //Compiler.compile(result);
+                    Compiler2.compile(result);
                 }
                 catch (e) {
+                    if (e instanceof ReferenceError) {
+                        throw e;
+                    }
                     console.warn(e);
                 }
             });
