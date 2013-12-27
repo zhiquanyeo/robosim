@@ -60,7 +60,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "ADD " + this.destination + ", " + this.source;
+			return "ADD " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -615,13 +615,6 @@ function(TypeChecker, AST) {
 	function POPInstruction(dest, executionUnit, comment) {
 		this.destination = dest;
 
-		Object.defineProperty(this, 'destination', {
-			get: function() {
-				return _dest;
-			},
-			enumerable: true
-		});
-
 		Object.defineProperty(this, 'type', {
 			get: function() {
 				return 'POP';
@@ -647,7 +640,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "POP " + this.destination;
+			return "POP " + _generateTargetString(this.destination);
 		}.bind(this);
 	}
 
@@ -880,7 +873,59 @@ function(TypeChecker, AST) {
 		var map = [];
 
 		//do the operation and push the result on to the stack
-		//if (statement.nodeType )
+		if (statement.nodeType === "Literal") {
+			map.push(new PUSHInstruction({
+				type: 'raw',
+				value: statement.value,
+			}, statement, "Push raw value on to stack while processing expression"));
+		}
+		else if (statement.nodeType === "Identifier") {
+			_getRawFromContext(statement.label, context, statement.loc);
+			map.push(new PUSHInstruction({
+				type: 'pendingVariable',
+				value: {
+					name: statement.label
+				}
+			}, statement, "Push variable value onto stack while processing expression"));
+		}
+		else if (statement.nodeType === 'BinaryExpression') {
+			//compile the left side
+			var leftMap = _compileExpression(statement.left, context);
+			var rightMap = _compileExpression(statement.right, context);
+
+			//pop left into R0, right into R1
+			map = map.concat(leftMap);
+			map = map.concat(rightMap);
+			map.push(new POPInstruction({
+				type: 'register',
+				value: 'R1'
+			}, statement, 'Store right side of expression in R1'));
+
+			map.push(new POPInstruction({
+				type: 'register',
+				value: 'R0'
+			}, statement, 'Store left side of expression in R0'));
+			
+			//Do the op
+			switch (statement.operator) {
+				case "+":
+					map.push(new ADDInstruction({
+						type: 'register',
+						value: 'R0'
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform ADD operation on R0 and R1"));
+					break;
+			}
+
+			map.push(new PUSHInstruction({
+				type: 'register',
+				value: 'R0'
+			}, statement, "Push result onto the stack"));
+		}
+
+		return map;
 	}
 
 	function _compileAssignment (statement, context) {
@@ -1144,7 +1189,7 @@ function(TypeChecker, AST) {
 			var statement = memmap[i];
 			var str = statement.toString();
 			if (statement.comment) {
-				str += " ; " + statement.comment;
+				str += "\t\t;" + statement.comment;
 			}
 			console.log(str);
 		}
