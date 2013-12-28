@@ -143,7 +143,7 @@ function($, _, Robot, Field, RangeFinder,
                     Compiler2.compile(result);
                 }
                 catch (e) {
-                    if (e instanceof ReferenceError) {
+                    if (e instanceof ReferenceError || e instanceof TypeError) {
                         throw e;
                     }
                     console.warn(e);

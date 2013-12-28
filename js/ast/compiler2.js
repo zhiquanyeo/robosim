@@ -405,14 +405,7 @@ function(TypeChecker, AST) {
 	}
 
 	function CALLInstruction(k, executionUnit, comment) {
-		var _offset = k;
-
-		Object.defineProperty(this, 'offset', {
-			get: function() {
-				return _offset;
-			},
-			enumerable: true
-		});
+		this.offset = k;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
@@ -439,7 +432,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "CALL " + this.destination;
+			return "CALL " + _generateTargetString(this.offset);
 		}.bind(this);
 	}
 
@@ -917,6 +910,35 @@ function(TypeChecker, AST) {
 						value: 'R1'
 					}, statement, "Perform ADD operation on R0 and R1"));
 					break;
+				case "-":
+					map.push(new SUBInstruction({
+						type: 'register',
+						value: 'R0'
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform SUB operation on R0 and R1"));
+					break;
+				case "*":
+					map.push(new MULInstruction({
+						type: 'register',
+						value: 'R0'
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform MUL operation on R0 and R1"));
+					break;
+				case "/":
+					map.push(new DIVInstruction({
+						type: 'register',
+						value: 'R0'
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform DIV operation on R0 and R1"));
+					break;
+				default:
+					throw new CompilerError("Operation '" + statement.operator + "' is not supported yet", statement.loc);
 			}
 
 			map.push(new PUSHInstruction({
@@ -994,9 +1016,13 @@ function(TypeChecker, AST) {
 				}
 			}, statement.right, "Store variable '" + newRight.label + "' in variable '" + storageLocation.name + "'"));
 		}
-		else {
+		else if (newRight.nodeType === "BinaryExpression") {
 			var expressionMap = _compileExpression(newRight, context);
 			map = map.concat(expressionMap);
+		}
+		else if (newRight.nodeType === "CallExpression") {
+			var callMap = _compileFunctionCall(newRight, context);
+			map = map.concat(callMap);
 		}
 
 		//will need to set up place holders for the variable locations
@@ -1018,7 +1044,96 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileFunctionCall (statement, context) {
+		console.log('compiling call expression', statement);
+		var map = [];
 
+		var funcName;
+		if (statement.callee.nodeType === "Identifier") {
+			funcName = statement.callee.label;
+		}
+		else if (statement.callee.nodeType === "MemberExpression") {
+			var nameParts = [statement.callee.property];
+			var base = statement.callee.base;
+			while (base.nodeType !== "Identifier") {
+				nameParts.unshift(base.property);
+				base = base.base;
+			}
+			nameParts.unshift(base.label);
+			funcName = nameParts.join('~');
+		}
+		console.log('=== Generating code for call to function ' + funcName);
+		var funcInfo = _getRawFromContext(funcName, context, statement.callee.loc);
+		console.log('funcInfo: ', funcInfo);
+		if (statement.args.length != funcInfo.parameters.length) {
+			throw new CompilerError("Incorrect number of arguments passed to function '" +
+				funcName + "'. Expected " + funcInfo.parameters.length + " but received " +
+				statement.args.length, statement.loc);
+		}
+
+		//push these onto the stack
+		for (var i = statement.args.length - 1; i >= 0; i--) {
+			var argument = statement.args[i];
+			var paramInfo = funcInfo.parameters[i];
+
+			//Generate the statements.
+			//if it's a Literal, just insert and check against varType in funcInfo
+			if (argument.nodeType === "Literal") {
+				switch (paramInfo.varType) {
+					case "int":
+					case "double":
+					case "boolean":
+						if (argument.type === "NumericLiteral" || argument.type === "BooleanLiteral") {
+							map.push(new PUSHInstruction({
+								type: 'raw',
+								value: TypeChecker.coerceValue(paramInfo.varType, argument.value),
+							},
+							statement, "Loading value for parameter #" + i));
+						}
+						else {
+							throw new CompilerError("Attempting to pass value of type string as parameter #" + i + " of type " + paramInfo.varType, statement.loc);
+						}
+						break;
+					case "string":
+						map.push(new PUSHInstruction({
+							type: 'raw',
+							value: TypeChecker.coerceValue(paramInfo,varType, argument.value),
+						}, statement, "Loading value for parameter #" + i));
+						break;
+				}
+			}
+		}
+
+		//Push the next statement in line onto the stack (return address)
+		map.push(new PUSHInstruction({
+			type: 'pointerAddress',
+			value: 'PC',
+			offset: 1
+		}, statement, "Pushing return address onto stack"));
+
+		//Push the current base pointer onto the stack
+		map.push(new PUSHInstruction({
+			type: 'pointerAddress',
+			value: 'EBP',
+		}, statement, "Pushing current EBP onto stack"));
+
+		//Set the base pointer to be 1 less than the stack pointer
+		map.push(new MOVInstruction({
+			type: 'pointerAddress',
+			value: 'EBP',
+		}, {
+			type: 'pointerAddress',
+			value: 'ESP',
+			offset: -1
+		}, statement, 'Setting new EBP to ESP-1'));
+
+		//Make the call to the function
+		map.push(new CALLInstruction({
+			type: 'pendingFunctionCall',
+			value: funcName
+		}, statement, "Jump to function '" + funcName + "'"));
+		
+
+		return map;
 	}
 
 	function _compileFunction (progStatement, context) {
@@ -1069,6 +1184,8 @@ function(TypeChecker, AST) {
 			parameters: paramList
 		};
 
+		var hasReturn = false;
+
 		//Generate the memory layout
 		if (!progStatement.body) {
 			//just put in a NOP
@@ -1105,10 +1222,27 @@ function(TypeChecker, AST) {
 					console.log('assignmentMap: ', assignmentMap);
 					memmap = memmap.concat(assignmentMap);
 				}
+				else if (statement.nodeType === "CallExpression") {
+					var callMap = _compileFunctionCall(statement, functionContext);
+					memmap = memmap.concat(callMap);
+				}
+				else if (statement.nodeType === "ReturnStatement") {
+					hasReturn = true;
+					if (statement.arg) {
+						console.log('return statement has arg', statement.arg);
+					}
+
+					memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
+				}
 			}
 		}
 
 		memmap = varmap.concat(memmap);
+
+		if (!hasReturn) {
+			//generate an implicit return statement
+			memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
+		}
 
 		//loop through the map and find anything with pendingVariable
 		for (var i = 0, len = memmap.length; i < len; i++) {
@@ -1131,13 +1265,16 @@ function(TypeChecker, AST) {
 					stmt.source.offset = ebpOffset;
 				}
 			}
+
 		}
 
-		console.log('Function Context: ', functionContext);
-		console.log("Base Pointer Offsets: ", basePointerOffsets);
-		console.log('memmap: ', memmap);
+		//console.log('Function Context: ', functionContext);
+		//console.log("Base Pointer Offsets: ", basePointerOffsets);
+		//console.log('memmap: ', memmap);
 
-		_printAssembly(memmap);
+		//_printAssembly(memmap);
+
+		return memmap;
 	}
 
 	function _compile (programAST) {
@@ -1151,6 +1288,10 @@ function(TypeChecker, AST) {
 		//Context, storing variable names (not values!)
 		var _context = {};
 
+		//Overall program memmap
+		var _memmap = [];
+		var _mapOffset = 0;
+
 		//Load all the global variables and functions
 		for (var i = 0, len = programAST.statements.length; i < len; i++) {
 			var statement = programAST.statements[i];
@@ -1160,15 +1301,36 @@ function(TypeChecker, AST) {
 				_registerVariables(statement, _context, true);
 			}
 			else if (statement.nodeType === "FunctionDeclaration") {
-				_compileFunction(statement, _context);
+				if (_functions[statement.name] !== undefined)
+					throw new CompilerError("Function '" + statement.name + "' has already been defined", statement.loc);
+				
+				//Store the offset
+				_functions[statement.name] = _mapOffset;
+				var functionMap = _compileFunction(statement, _context);
+				_mapOffset = _mapOffset + functionMap.length;
+				_memmap = _memmap.concat(functionMap);
 			}
 			else {
 				throw new CompilerError("Top level of program may only contain function or variable declarations", statement.loc);
 			}
 		}
 
+		for (i = 0, len = _memmap.length; i < len; i++) {
+			var stmt = _memmap[i];
+			if (stmt.offset) {
+				if (stmt.offset.type === 'pendingFunctionCall') {
+					var offset = _functions[stmt.offset.value];
+					stmt.offset.type = 'raw';
+					stmt.offset.value = offset;
+				}
+			}
+		}
+
 		//This stores global scope!
 		console.log("Context: ", _context);
+
+		console.log("=== The Program ===");
+		_printAssembly(_memmap);
 	}
 
 	function _generateTargetString(obj) {
@@ -1179,7 +1341,10 @@ function(TypeChecker, AST) {
 			return obj.value;
 		}
 		else if (obj.type === 'pointer') {
-			return obj.value + (obj.offset >= 0 ? '+' : '') + obj.offset;
+			return '[' + obj.value + (obj.offset >= 0 ? '+' : '') + (obj.offset ? obj.offset : '') + ']';
+		}
+		else if (obj.type === 'pointerAddress') {
+			return obj.value + (obj.offset >= 0 ? '+' : '') + (obj.offset ? obj.offset : '');
 		}
 	}
 
@@ -1191,7 +1356,7 @@ function(TypeChecker, AST) {
 			if (statement.comment) {
 				str += "\t\t;" + statement.comment;
 			}
-			console.log(str);
+			console.log('[' + i + ']\t' + str);
 		}
 	}
 
