@@ -696,6 +696,8 @@ function(TypeChecker, AST) {
 		}
 		else if (node.nodeType === "BinaryExpression") {
 			//TODO: implement this
+			//Constant fold first
+			var newNode = node.cfold();
 		}
 		else if (node.nodeType === "CallExpression") {
 			//if the noCall flag is set (as it should when processing top level directives)
@@ -972,11 +974,29 @@ function(TypeChecker, AST) {
 			if (statement.left.base.nodeType !== "Identifier") {
 				throw new CompilerError("Only single dimensional arrays are supported", statement.left.base.loc);
 			}
-			var data = _getRawFromContext(statement.left.base, context, statement.left.base.loc);
+			var data = _getRawFromContext(statement.left.base.label, context, statement.left.base.loc);
 			if (!data.isArray) {
 				throw new CompilerError("'" + statement.left.base.label + "' is not an array and does not support indexing", statement.left.base.loc);
 			}
 			storageLocation.name = statement.left.base.label;
+
+			console.log('index: ', statement.left.property);
+
+			if (statement.left.property.nodeType === "Literal") {
+
+			}
+			else if (statement.left.property.nodeType === "Identifier") {
+
+			}
+			else {
+				if (statement.left.property.nodeType !== 'BinaryExpression')
+					throw new CompilerError("Cannot evaluate array index", statement.left.property.loc);
+
+				//it's a binary expression, so... generate the statements
+				//the result will be stored on the stack
+				var exprMap = _compileExpression(statement.left.property, context);
+
+			}
 
 			//TODO Implement
 			//Ugh we have to evaluate the location
@@ -1100,6 +1120,32 @@ function(TypeChecker, AST) {
 						}, statement, "Loading value for parameter #" + i));
 						break;
 				}
+			}
+			else if (argument.nodeType === "Identifier") {
+				//We should try to typecheck...
+				var varInfo = _getRawFromContext(argument.label, context, argument.loc);
+				switch (paramInfo.varType) {
+					case "int":
+					case "double":
+					case "boolean":
+						if (varInfo.varType === "string") {
+							throw new CompilerError("Attempting to pass value of type string as parameter #" + i + " of type " + paramInfo.varType, statement.loc);
+						}
+						break;
+				}
+				var exprMap = _compileExpression(argument, context);
+				map = map.concat(exprMap);
+			}
+			else if (argument.nodeType === "BinaryExpression") {
+				//TODO how do we typecheck this?
+				var exprMap = _compileExpression(argument, context);
+				map = map.concat(exprMap);
+			}
+			else if (argument.nodeType === "UnaryExpression") {
+
+			}
+			else if (argument.nodeType === "MemberExpression") {
+
 			}
 		}
 
@@ -1240,8 +1286,11 @@ function(TypeChecker, AST) {
 		memmap = varmap.concat(memmap);
 
 		if (!hasReturn) {
+			if (progStatement.type !== "void") {
+				throw new CompilerError("Function '" + progStatement.name + "' does not return a value. Expected to return type " + progStatement.type, progStatement.loc);
+			}
 			//generate an implicit return statement
-			memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
+			memmap.push(new RETInstruction(progStatement, "Return from function '" + progStatement.name + "'"));
 		}
 
 		//loop through the map and find anything with pendingVariable
@@ -1251,7 +1300,7 @@ function(TypeChecker, AST) {
 				if (stmt.destination.type === 'pendingVariable') {
 					//grab ebp offset
 					var ebpOffset = basePointerOffsets[stmt.destination.value.name];
-					stmt.destination.type = 'pointer';
+					stmt.destination.type = 'pointerAddress';
 					stmt.destination.value = 'EBP';
 					stmt.destination.offset = ebpOffset;
 				}
