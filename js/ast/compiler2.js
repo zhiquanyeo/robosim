@@ -8,7 +8,7 @@ function(TypeChecker, AST) {
 	}
 
 	//The Program. Self contained execution unit, including program counter
-	function Program() {
+	function Program(memmap, mainOffset) {
 		var _pc = 0; //program counter;
 		var _sp = 0; //Stack Pointer
 		var _bp = 0; //Base pointer
@@ -25,9 +25,156 @@ function(TypeChecker, AST) {
 			'RAX': null, //Used for storing return values
 		};
 
-		var _stack = [];
+		var _stack = [null];
+		_sp = 1; //Start at 1, slot 0 is base pointer
 
-		var _progmem = [];
+		var _progmem = memmap;
+		//Start the PC at main
+		_pc = mainOffset;
+
+		console.log('---- Program ready ----');
+		console.log('_pc is set to ', _pc);
+
+		//We also need to register any external functions
+		var _externalFunctions = {};
+
+		this.registerExternalFunction = function(name, func) {
+			_externalFunctions[name] = func;
+		};
+
+		function _getValue(addrInfo) {
+			var actualAddress;
+			switch (addrInfo.type) {
+				case 'raw':
+					return addrInfo.value;
+				case 'register':
+					return registers[addrInfo.value];
+				case 'pointer':
+					if (addrInfo.value === 'EBP') {
+						actualAddress = _bp;
+					}
+					else if (addrInfo.value === 'ESP') {
+						actualAddress = _sp;
+					}
+					if (addrInfo.offset)
+						actualAddress += addrInfo.offset;
+					return _stack[actualAddress];
+				case 'pointerAddress':
+					if (addrInfo.value === 'EBP') {
+						actualAddress = _bp;
+					}
+					else if (addrInfo.value === 'ESP') {
+						actualAddress = _sp;
+					}
+					else if (addrInfo.value === 'PC') {
+						actualAddress = _pc;
+					}
+					if (addrInfo.offset)
+						actualAddress += addrInfo.offset;
+					return actualAddress;
+			}
+		}
+
+		function _setValue(addrInfo, valueInfo) {
+			switch (addrInfo.type) {
+				case 'register':
+					registers[addrInfo.value] = _getValue(valueInfo);
+					break;
+				case 'pointerAddress':
+					var addr;
+					if (addrInfo.value === 'EBP')
+						addr = _bp;
+					else if (addrInfo.value === 'ESP')
+						addr = _sp;
+					if (addrInfo.offset)
+						addr += addrInfo.offset;
+					_stack[addr] = _getValue(valueInfo);
+					break;
+				default:
+					console.error("Could not process setValue instruction");
+			}
+		}
+
+		function _printStackInfo() {
+			console.log("=== STACK ===");
+			console.log("Stack Pointer: ", _sp);
+			console.log("Base Pointer: ", _bp);
+			for (var i = 0, len = _stack.length; i < len; i++) {
+				console.log('[' + i + ']', _stack[i]);
+			}
+			console.log('=== END STACK ===');
+		}
+
+		function _printRegisters() {
+			console.log("=== REGISTERS ===");
+			for (var i in registers) {
+				console.log("'" + i + "' - ", registers[i]);
+			}
+			console.log("=== END REGISTERS ===");
+		}
+
+		function _printInfo() {
+			_printStackInfo();
+			_printRegisters();
+		}
+
+		//returns true if statement was executed, false otherwise
+		this.executeNext = function() {
+			if (_pc >= _progmem.length)
+				return false;
+			console.log('-- pc:', _pc);
+			var instruction = _progmem[_pc];
+			//increment the pc here
+			_pc++;
+
+			switch (instruction.type) {
+				case "PUSH": {
+					_stack.push(_getValue(instruction.source));
+					_sp++;
+				} break;
+				case 'POP': {
+					_sp--;
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _stack.pop()
+					});
+				} break;
+				case 'MOV': {
+					_setValue(instruction.destination, instruction.source);
+				} break;
+				case 'ADD': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) + _getValue(instruction.source)
+					});
+				} break;
+				case 'SUB': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) - _getValue(instruction.source)
+					});
+				} break;
+				case 'MUL': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) * _getValue(instruction.source)
+					});
+				} break;
+				case 'DIV': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) / _getValue(instruction.source)
+					});
+				} break;
+			}
+
+			_printInfo();
+			return true;
+		};
+
+		this.hasNextStatement = function() {
+			return _pc < _progmem.length;
+		};
 	}
 
 	//Instructions
@@ -93,7 +240,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "SUB " + this.destination + ", " + this.source;
+			return "SUB " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -126,7 +273,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "MUL " + this.destination + ", " + this.source;
+			return "MUL " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -159,7 +306,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "DIV " + this.destination + ", " + this.source;
+			return "DIV " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -667,6 +814,33 @@ function(TypeChecker, AST) {
 		};
 	}
 
+	//External function call for special functions
+	function EXTInstruction(command, data, executionUnit, comment) {
+		this.command = command;
+		this.data = data;
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "EXT " + this.command;
+		};
+	}
+
 	//==================== COMPILATION RELATED FUNCTIONS ===========================
 	
 	//Get raw context value
@@ -698,6 +872,8 @@ function(TypeChecker, AST) {
 			//TODO: implement this
 			//Constant fold first
 			var newNode = node.cfold();
+			//just return a placeholder object
+
 		}
 		else if (node.nodeType === "CallExpression") {
 			//if the noCall flag is set (as it should when processing top level directives)
@@ -1039,6 +1215,18 @@ function(TypeChecker, AST) {
 		else if (newRight.nodeType === "BinaryExpression") {
 			var expressionMap = _compileExpression(newRight, context);
 			map = map.concat(expressionMap);
+			//need to pop the expression
+			map.push(new POPInstruction({
+				type: 'register',
+				value: 'R0'
+			}));
+			map.push(new MOVInstruction({
+				type: 'pendingVariable',
+				value: storageLocation,
+			}, {
+				type: 'register',
+				value: 'R0'
+			}, statement.right, "Store result of expression in variable '" + storageLocation.name + "'"));
 		}
 		else if (newRight.nodeType === "CallExpression") {
 			var callMap = _compileFunctionCall(newRight, context);
@@ -1116,7 +1304,7 @@ function(TypeChecker, AST) {
 					case "string":
 						map.push(new PUSHInstruction({
 							type: 'raw',
-							value: TypeChecker.coerceValue(paramInfo,varType, argument.value),
+							value: TypeChecker.coerceValue(paramInfo.varType, argument.value),
 						}, statement, "Loading value for parameter #" + i));
 						break;
 				}
@@ -1152,8 +1340,8 @@ function(TypeChecker, AST) {
 		//Push the next statement in line onto the stack (return address)
 		map.push(new PUSHInstruction({
 			type: 'pointerAddress',
-			value: 'PC',
-			offset: 1
+			value: 'PC', 
+			offset: 3, //need to jump to the line AFTER the call
 		}, statement, "Pushing return address onto stack"));
 
 		//Push the current base pointer onto the stack
@@ -1190,7 +1378,7 @@ function(TypeChecker, AST) {
 
 		//base pointer offsets
 		var basePointerOffsets = {};
-		var bpOffset = -1;
+		var bpOffset = -2; //ebp-1 is return address
 
 		var functionContext = {
 			__parentContext: context,
@@ -1338,6 +1526,32 @@ function(TypeChecker, AST) {
 		return memmap;
 	}
 
+	function _installBuiltIns(functionList, context) {
+		var map = [];
+		var mapOffset = 0;
+
+		//Register the PRINT function
+		functionList["print"] = mapOffset;
+		context["print"] = {
+			type: 'function',
+			retType: 'void',
+			parameters: [{
+				varType: 'string',
+				name: 'str'
+			}]
+		};
+
+		//The EXT call will automatically pop the correct variables from the stack
+		map.push(new EXTInstruction('print', [{varType: 'string', name: 'str'}], null,
+			"External call to print function"));
+		map.push(new RETInstruction(null, "Return from print"));
+		mapOffset = map.length;
+
+		//Add any more functions here
+
+		return map;
+	}
+
 	function _compile (programAST) {
 		console.log("======= COMPILER 2 ========");
 		//Global variables, the _data segment
@@ -1352,6 +1566,9 @@ function(TypeChecker, AST) {
 		//Overall program memmap
 		var _memmap = [];
 		var _mapOffset = 0;
+
+		_memmap = _memmap.concat(_installBuiltIns(_functions, _context));
+		_mapOffset = _memmap.length;
 
 		//Load all the global variables and functions
 		for (var i = 0, len = programAST.statements.length; i < len; i++) {
@@ -1392,6 +1609,19 @@ function(TypeChecker, AST) {
 
 		console.log("=== The Program ===");
 		_printAssembly(_memmap);
+
+		if (_functions["main"] === undefined) {
+			throw new CompilerError("Expecting a main function but found none", {line: 0, col: 0});
+		}
+
+		var program = new Program(_memmap, _functions["main"]);
+		//register a print function
+		program.registerExternalFunction('print', function(str) {
+			console.log('[PROGRAM OUTPUT] ' + str);
+		});
+		for (var i = 0; i < 33; i++) {
+			program.executeNext();
+		}
 	}
 
 	function _generateTargetString(obj) {
