@@ -1274,8 +1274,20 @@ function(TypeChecker, AST) {
 				}
 				else if (statement.nodeType === "ReturnStatement") {
 					hasReturn = true;
-					if (statement.arg) {
-						console.log('return statement has arg', statement.arg);
+					if (statement.argument) {
+						console.log('return statement has arg', statement.argument);
+						if (progStatement.type === "void") {
+							throw new CompilerError("Attempting to return value from void function", statement.loc);
+						}
+
+						//Put value in RAX
+						var retMap = _compileExpression(statement.argument, functionContext);
+						//POP into RAX
+						memmap = memmap.concat(retMap);
+						memmap.push(new POPInstruction({
+							type: 'register',
+							value: 'RAX'
+						}, statement, "Store return value in RAX"));
 					}
 
 					memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
