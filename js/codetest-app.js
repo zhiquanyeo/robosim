@@ -168,7 +168,7 @@ function(AST, Parser, Compiler) {
 					if (e instanceof ReferenceError || e instanceof TypeError) {
 						throw e;
 					}
-					outputArea.innerHTML += "[Line " + e.loc.line + ", Col " + e.loc.column + "] " + e.message + "\n";
+					outputArea.innerHTML += "[Line " + e.line + ", Col " + e.column + "] " + e.message + "\n";
 				}
 			});
 		}
