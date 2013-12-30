@@ -1,0 +1,126 @@
+#mainArea {
+	display: -webkit-flex;
+	-webkit-flex-flow: column;
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	right: 10px;
+	bottom: 10px;
+}
+
+#processorViz {
+	display: -webkit-flex;
+	-webkit-flex-flow: row;
+	position: relative;
+	-webkit-flex: 1 1 auto;
+	min-height: auto;
+}
+
+#instructions {
+	padding: 20px;
+	-webkit-flex: 1 1 auto;
+	overflow: scroll;
+}
+
+#stack {
+	width: 350px;
+	padding: 20px;
+	overflow: scroll;
+}
+
+#pointerInfo {
+	font-size: 12px;
+	line-height: 30px;
+	background: #efefef;
+}
+
+#outputArea {
+	height: 150px;
+	overflow: scroll;
+	background: #efefef;
+
+	font-family: monospace;
+    white-space: pre;
+}
+
+.instruction-entry {
+	font-size: 12px;
+	display: -webkit-flex;
+	-webkit-flex-flow: row;
+}
+
+.instruction-entry .pc-indicator {
+	width: 60px;
+	position: relative;
+}
+
+.instruction-entry .pc-indicator.selected {
+	background: #cfcfcf;
+}
+
+.instruction-entry .pc-indicator.selected::after {
+	content: 'PC -->';
+	text-align: right;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+.instruction-entry .address {
+	width: 40px;
+}
+
+.instruction-entry .instruction {
+	min-width: auto;
+	-webkit-flex: 1 1 auto;
+}
+
+.stack-entry {
+	font-size: 12px;
+	display: -webkit-flex;
+	-webkit-flex-flow: row;
+}
+
+.stack-entry .bp-indicator {
+	width: 60px;
+	position: relative;
+}
+
+.stack-entry .bp-indicator.selected {
+	background: #efefef;
+}
+
+.stack-entry .bp-indicator.selected::after {
+	content: 'EBP -->';
+	text-align: right;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+.stack-entry .address {
+	width: 40px;
+}
+
+.stack-entry .data {
+	-webkit-flex: 1 1 auto;
+	min-width: 200px;
+	border: 1px solid black;
+}
+
+.stack-entry .sp-indicator {
+	width: 60px;
+	position: relative;
+}
+
+.stack-entry .sp-indicator.selected {
+	background: #efefef;
+}
+
+.stack-entry .sp-indicator.selected::after {
+	content: '<-- ESP';
+	text-align: left;
+	position: absolute;
+	left: 0;
+	top: 0;
+}

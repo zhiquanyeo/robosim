@@ -25,15 +25,41 @@ function(TypeChecker, AST) {
 			'RAX': null, //Used for storing return values
 		};
 
-		var _stack = [null];
-		_sp = 1; //Start at 1, slot 0 is base pointer
+		var _stack = [-1, null];
+		_sp = 2; //Start at 2, slot 0 is termination marker, slot 1 is base pointer
+		_bp = 1;
 
 		var _progmem = memmap;
 		//Start the PC at main
 		_pc = mainOffset;
 
+
 		console.log('---- Program ready ----');
 		console.log('_pc is set to ', _pc);
+
+		this.getPC = function () {
+			return _pc;
+		};
+
+		this.getSP = function () {
+			return _sp;
+		};
+
+		this.getBP = function () {
+			return _bp;
+		};
+
+		this.getStack = function() {
+			return _stack;
+		};
+
+		this.getInstructions = function() {
+			return _progmem;
+		};
+
+		this.getRegisters = function() {
+			return registers;
+		};
 
 		//We also need to register any external functions
 		var _externalFunctions = {};
@@ -81,6 +107,12 @@ function(TypeChecker, AST) {
 					registers[addrInfo.value] = _getValue(valueInfo);
 					break;
 				case 'pointerAddress':
+					if (addrInfo.value === 'EBP')
+						_bp = _getValue(valueInfo);
+					else if (addrInfo.value === 'ESP')
+						_sp = _getValue(valueInfo);
+					break;
+				case 'pointer':
 					var addr;
 					if (addrInfo.value === 'EBP')
 						addr = _bp;
@@ -120,7 +152,7 @@ function(TypeChecker, AST) {
 
 		//returns true if statement was executed, false otherwise
 		this.executeNext = function() {
-			if (_pc >= _progmem.length)
+			if (_pc >= _progmem.length || _pc < 0)
 				return false;
 			console.log('-- pc:', _pc);
 			var instruction = _progmem[_pc];
@@ -166,6 +198,41 @@ function(TypeChecker, AST) {
 						value: _getValue(instruction.destination) / _getValue(instruction.source)
 					});
 				} break;
+				case 'CALL': {
+					_pc = _getValue(instruction.offset);
+					console.log('setting PC to ', _getValue(instruction.offset));
+				} break;
+
+				//Experimental
+				case 'EXT': {
+					console.log('running external:', instruction);
+					//Get the list of parameters ready
+					var numParams = instruction.data.length;
+					var data = [];
+					for (var i = 0; i < numParams; i++) {
+						data.push(_getValue({
+							type: 'pointer',
+							value: 'EBP',
+							offset: -2 - i,
+						}));
+					}
+					console.log('passing parameters: ', data);
+					if (_externalFunctions[instruction.command])
+						_externalFunctions[instruction.command].apply(null, data);
+				} break;
+
+				case 'RET': {
+					//TODO implement
+					_sp = _bp;
+					_bp = _stack[_bp];
+					console.log ('new stack pointer:', _sp);
+					console.log('new base pointer:', _bp);
+					_pc = _stack[_bp-1];
+					console.log('pc: ', _pc);
+					console.log('--- returning from function ---');
+					_stack = _stack.slice(0, _sp);
+					
+				} break;
 			}
 
 			_printInfo();
@@ -173,7 +240,7 @@ function(TypeChecker, AST) {
 		};
 
 		this.hasNextStatement = function() {
-			return _pc < _progmem.length;
+			return _pc < _progmem.length && _pc >= 0;
 		};
 	}
 
@@ -818,6 +885,13 @@ function(TypeChecker, AST) {
 	function EXTInstruction(command, data, executionUnit, comment) {
 		this.command = command;
 		this.data = data;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'EXT';
+			},
+			enumerable: true
+		});
 
 		//For debugging purposes
 		var _executionUnit = executionUnit;
@@ -1500,7 +1574,7 @@ function(TypeChecker, AST) {
 				if (stmt.destination.type === 'pendingVariable') {
 					//grab ebp offset
 					var ebpOffset = basePointerOffsets[stmt.destination.value.name];
-					stmt.destination.type = 'pointerAddress';
+					stmt.destination.type = 'pointer';
 					stmt.destination.value = 'EBP';
 					stmt.destination.offset = ebpOffset;
 				}
@@ -1611,17 +1685,20 @@ function(TypeChecker, AST) {
 		_printAssembly(_memmap);
 
 		if (_functions["main"] === undefined) {
-			throw new CompilerError("Expecting a main function but found none", {line: 0, col: 0});
+			throw new CompilerError("Expecting a main function but found none", {line: 0, column: 0});
 		}
 
 		var program = new Program(_memmap, _functions["main"]);
-		//register a print function
-		program.registerExternalFunction('print', function(str) {
-			console.log('[PROGRAM OUTPUT] ' + str);
-		});
-		for (var i = 0; i < 33; i++) {
-			program.executeNext();
-		}
+		// //register a print function
+		// program.registerExternalFunction('print', function(str) {
+		// 	console.log('[PROGRAM OUTPUT] ' + str);
+		// });
+		// while (program.hasNextStatement()) {
+		// 	program.executeNext();
+		// }
+		// console.log('program terminated');
+
+		return program;
 	}
 
 	function _generateTargetString(obj) {

@@ -1,0 +1,63 @@
+<html>
+<head>
+	<title>RoboSimC Tester</title>
+	<link rel="stylesheet" type="text/css" href="css/codetest.css" />
+	<script src="js/libs/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+	<script data-main="js/codetest-main" src="js/libs/require.js"></script>
+</head>
+<body>
+	<div id="mainArea">
+		<div id="processorViz">
+			<div id="instructions">
+				<div class="instruction-entry">
+					<div class="pc-indicator"></div>
+					<div class="address">[0]</div>
+					<div class="instruction">MOV EBP, ESP</div>
+				</div>
+				<div class="instruction-entry">
+					<div class="pc-indicator selected"></div>
+					<div class="address">[1]</div>
+					<div class="instruction">MOV R0, 1</div>
+				</div>
+			</div>
+			<div id="stack">
+				<div class="stack-entry">
+					<div class="bp-indicator"></div>
+					<div class="address">[0]</div>
+					<div class="data">123456</div>
+					<div class="sp-indicator"></div>
+				</div>
+				<div class="stack-entry">
+					<div class="bp-indicator selected"></div>
+					<div class="address">[1]</div>
+					<div class="data">22</div>
+					<div class="sp-indicator"></div>
+				</div>
+				<div class="stack-entry">
+					<div class="bp-indicator"></div>
+					<div class="address">[2]</div>
+					<div class="data">168</div>
+					<div class="sp-indicator"></div>
+				</div>
+				<div class="stack-entry">
+					<div class="bp-indicator"></div>
+					<div class="address">[3]</div>
+					<div class="data">0</div>
+					<div class="sp-indicator selected"></div>
+				</div>
+			</div>
+		</div>
+		<div id="pointerInfo" style="min-height: 30px;"></div>
+		<div id="controlArea" style="min-height: 50px;">
+			<button id="btnCompile">Compile</button>
+			<button id="btnStepNext">Step Next</button>
+			<button id="btnClearOutput">Clear Output</button>
+		</div>
+		<div id="editorPane" style="min-height: 250px;"></div>
+		<div id="outputArea"></div>
+	</div>
+	
+	
+
+</body>
+</html>
