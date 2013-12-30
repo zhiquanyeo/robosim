@@ -227,7 +227,7 @@ function(TypeChecker, AST) {
 					_bp = _stack[_bp];
 					console.log ('new stack pointer:', _sp);
 					console.log('new base pointer:', _bp);
-					_pc = _stack[_bp-1];
+					_pc = _stack[_sp-1];
 					console.log('pc: ', _pc);
 					console.log('--- returning from function ---');
 					_stack = _stack.slice(0, _sp);
