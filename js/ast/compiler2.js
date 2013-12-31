@@ -235,7 +235,7 @@ function(TypeChecker, AST) {
 				} break;
 			}
 
-			_printInfo();
+			//_printInfo();
 			return true;
 		};
 
@@ -1233,7 +1233,10 @@ function(TypeChecker, AST) {
 			console.log('index: ', statement.left.property);
 
 			if (statement.left.property.nodeType === "Literal") {
-
+				if (statement.left.property.type !== "NumericLiteral") {
+					throw new CompilerError("Array index must be a number", statement.left.property.loc);
+				}
+				storageLocation.index = statement.left.property.value;
 			}
 			else if (statement.left.property.nodeType === "Identifier") {
 
@@ -1494,6 +1497,8 @@ function(TypeChecker, AST) {
 
 		var hasReturn = false;
 
+		var pendingInitializers = [];
+
 		//Generate the memory layout
 		if (!progStatement.body) {
 			//just put in a NOP
@@ -1506,24 +1511,37 @@ function(TypeChecker, AST) {
 
 				//send the statement to the relevant compilation modules
 				if (statement.nodeType === "VariableDeclaration") {
-					_registerVariables(statement, functionContext);
-					//Grab the new variables and assign them base offsets
-					for (var j in functionContext) {
-						var ctxItem = functionContext[j];
-						if (ctxItem.type === "variable") {
-							if (!basePointerOffsets[ctxItem.name]) {
-								basePointerOffsets[ctxItem.name] = bpOffset++;
-								//It's a new variable we are declaring
-								//push onto the stack
-								//we can just save the value...
-								varmap.push(new PUSHInstruction({
-									type: 'raw',
-									value: ctxItem.value
-								}, statement, 'Set up space for variable \'' + ctxItem.name + '\' on stack'));
-							}
+					
+					var variables = _getVariables(statement);
+					for (var v = 0; v < variables.length; v++) {
+						var variable = variables[v];
+						if (functionContext[variable.name] !== undefined) {
+							throw new CompilerError("'" + variable.name + "' has already been declared", variable.ref.loc);
 						}
-					}
 
+						functionContext[variable.name] = variable;
+
+						if (variable.initializer !== undefined) {
+							pendingInitializers.push({
+								name: variable.name,
+								initializer: variable.initializer
+							});
+						}
+
+						basePointerOffsets[variable.name] = bpOffset++;
+						console.log('variable: ', variable);
+						var defaultVal;
+						if (variable.varType === "int" || variable.varType === "double")
+							defaultVal = 0;
+						else if (variable.varType === "boolean")
+							defaultVal = false;
+						else if (variable.varType === "string")
+							defaultVal = "";
+						varmap.push(new PUSHInstruction({
+							type: 'raw',
+							value: defaultVal,
+						}, statement, "Set up space for variable '" + variable.name + "' on stack"));
+					}
 				}
 				else if (statement.nodeType === "AssignmentExpression") {
 					var assignmentMap = _compileAssignment(statement, functionContext);
@@ -1554,6 +1572,64 @@ function(TypeChecker, AST) {
 
 					memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
 				}
+			}
+		}
+
+		//Handle the init stuff
+		//Handle the initializers
+		for (var vi = 0; vi < pendingInitializers.length; vi++) {
+			var pInit = pendingInitializers[vi];
+			var varInfo = functionContext[pInit.name];
+			if (pInit.initializer.nodeType === "Literal") {
+				var value = pInit.initializer.value;
+				if (TypeChecker.typeCheck(varInfo.varType, value)) {
+					value = TypeChecker.coerceValue(varInfo.varType, value);
+					//generate the MOV instruction
+					varmap.push(new MOVInstruction({
+						type: 'pointer',
+						value: 'EBP',
+						offset: basePointerOffsets[pInit.name]
+					}, {
+						type: 'raw',
+						value: value
+					}, pInit.initializer, "Assign value to variable '" + pInit.name + "'"));
+				}
+			}
+			else if (pInit.initializer.nodeType === "Identifier") {
+				var targetInfo = functionContext[pInit.initializer.label];
+				if (targetInfo === undefined)
+					throw new CompilerError("'" + pInit.initializer.label + "' has not been declared", pInit.initializer.loc);
+				//TODO type check?
+				varmap.push(new MOVInstruction({
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[pInit.name]
+				}, {
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[targetInfo.name]
+				}, pInit.initializer, "Assign value to variable '" + pInit.name + "'"));
+			}
+			else if (pInit.initializer.nodeType === "BinaryExpression") {
+				var exprMap = _compileExpression(pInit.initializer, functionContext);
+				varmap = varmap.concat(exprMap);
+				varmap.push(new POPInstruction({
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[pInit.name]
+				}, pInit.initializer, "Move result of expression into variable '" + pInit.name + "'"));
+			}
+			else if (pInit.initializer.nodeType === "CallExpression") {
+				var callMap = _compileFunctionCall(pInit.initializer, functionContext);
+				varmap = varmap.concat(callMap);
+				varmap.push(new MOVInstruction({
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[pInit.name]
+				}, {
+					type: 'register',
+					value: 'RAX',
+				}, pInit.initializer, "Assign result of function call to variable '" + pInit.name + "'"));
 			}
 		}
 
@@ -1689,14 +1765,6 @@ function(TypeChecker, AST) {
 		}
 
 		var program = new Program(_memmap, _functions["main"]);
-		// //register a print function
-		// program.registerExternalFunction('print', function(str) {
-		// 	console.log('[PROGRAM OUTPUT] ' + str);
-		// });
-		// while (program.hasNextStatement()) {
-		// 	program.executeNext();
-		// }
-		// console.log('program terminated');
 
 		return program;
 	}
