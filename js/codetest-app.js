@@ -3,7 +3,11 @@ function(AST, Parser, Compiler) {
 
 	return {
 		start: function() {
+			var errorLine = null;
 			console.log('starting');
+
+			//Set up the ACE Range object
+			var EditorRange = ace.require('ace/range').Range;
 
 			var editor = ace.edit("editorPane");
 			editor.getSession().setMode("ace/mode/c_cpp");
@@ -123,6 +127,11 @@ function(AST, Parser, Compiler) {
 			});
 
 			compileButton.addEventListener('click', function() {
+				editor.getSession().clearAnnotations();
+				if (errorLine !== null) {
+					editor.getSession().removeMarker(errorLine);
+					errorLine = null;
+				}
 				try {
 					var result = Parser.parse(editor.getSession().getValue());
 					program = Compiler.compile(result);
@@ -170,6 +179,16 @@ function(AST, Parser, Compiler) {
 						throw e;
 					}
 					outputArea.innerHTML += "[Line " + e.line + ", Col " + e.column + "] " + e.message + "\n";
+					if (e.line !== undefined && e.column !== undefined) {
+						editor.getSession().setAnnotations([{
+							row: e.line-1,
+							column: e.column,
+							text: e.message,
+							type: 'error'
+						}]);
+
+						errorLine = editor.getSession().addMarker(new EditorRange(e.line-1,0, e.line, 0), "error", "line");
+					}
 				}
 			});
 		}
