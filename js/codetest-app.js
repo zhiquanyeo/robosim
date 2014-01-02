@@ -178,16 +178,25 @@ function(AST, Parser, Compiler) {
 					if (e instanceof ReferenceError || e instanceof TypeError) {
 						throw e;
 					}
-					outputArea.innerHTML += "[Line " + e.line + ", Col " + e.column + "] " + e.message + "\n";
-					if (e.line !== undefined && e.column !== undefined) {
+					var line, col;
+					if (e.line && e.column) {
+						line = e.line;
+						col = e.column;
+					}
+					else if (e.loc) {
+						line = e.loc.line;
+						col = e.loc.column;
+					}
+					outputArea.innerHTML += "[Line " + line + ", Col " + col + "] " + e.message + "\n";
+					if (line !== undefined && col !== undefined) {
 						editor.getSession().setAnnotations([{
-							row: e.line-1,
-							column: e.column,
+							row: line-1,
+							column: col,
 							text: e.message,
 							type: 'error'
 						}]);
 
-						errorLine = editor.getSession().addMarker(new EditorRange(e.line-1,0, e.line, 0), "error", "line");
+						errorLine = editor.getSession().addMarker(new EditorRange(line-1,0, line, 0), "error", "line");
 					}
 				}
 			});
