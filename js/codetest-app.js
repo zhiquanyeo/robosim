@@ -31,6 +31,7 @@ function(AST, Parser, Compiler) {
 				for (var reg in registers) {
 					pointerInfoArea.innerHTML += reg + ":&nbsp;&nbsp;" + registers[reg] + ",&nbsp;&nbsp;";
 				}
+				pointerInfoArea.innerHTML += "ZF:&nbsp;&nbsp;" + program.getZF();
 			}
 
 			function resetPCDisplay() {

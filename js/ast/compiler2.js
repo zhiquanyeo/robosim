@@ -13,6 +13,8 @@ function(TypeChecker, AST) {
 		var _sp = 0; //Stack Pointer
 		var _bp = 0; //Base pointer
 
+		var _zf = false; //zero flag
+
 		var registers = {
 			'R0': null,
 			'R1': null,
@@ -47,6 +49,10 @@ function(TypeChecker, AST) {
 
 		this.getBP = function () {
 			return _bp;
+		};
+
+		this.getZF = function() {
+			return _zf;
 		};
 
 		this.getStack = function() {
@@ -203,6 +209,54 @@ function(TypeChecker, AST) {
 					console.log('setting PC to ', _getValue(instruction.offset));
 				} break;
 
+				case 'EQ': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) == _getValue(instruction.source)
+					});
+				} break;
+				case 'NEQ': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) != _getValue(instruction.source)
+					});
+				} break;
+				case 'LT': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) < _getValue(instruction.source)
+					});
+				} break;
+				case 'LTE': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) <= _getValue(instruction.source)
+					});
+				} break;
+				case 'GT': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) > _getValue(instruction.source)
+					});
+				} break;
+				case 'GTE': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) >= _getValue(instruction.source)
+					});
+				} break;
+				case 'CMP': {
+					_zf = (_getValue(instruction.destination) - _getValue(instruction.source)) == 0;
+				} break;
+				case 'RJNE': {
+					if (!_zf) {
+						_pc = _pc + _getValue(instruction.offset);
+					}
+				} break;
+				case 'RJMP': {
+					_pc = _pc + _getValue(instruction.offset);
+				} break;
+
 				//Experimental
 				case 'EXT': {
 					console.log('running external:', instruction);
@@ -222,7 +276,6 @@ function(TypeChecker, AST) {
 				} break;
 
 				case 'RET': {
-					//TODO implement
 					_sp = _bp;
 					_bp = _stack[_bp];
 					console.log ('new stack pointer:', _sp);
@@ -575,7 +628,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "RJMP " + this.destination;
+			return "RJMP " + _generateTargetString(this.offset);
 		}.bind(this);
 	}
 
@@ -681,13 +734,13 @@ function(TypeChecker, AST) {
 	}
 
 	//Compare
-	function CPInstruction(dest, src, executionUnit, comment) {
+	function CMPInstruction(dest, src, executionUnit, comment) {
 		this.destination = dest;
 		this.source = src;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
-				return 'CP';
+				return 'CMP';
 			},
 			enumerable: true,
 		});
@@ -710,7 +763,274 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "CP " + this.destination + ", " + this.source;
+			return "CMP " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	function EQInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'EQ';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "EQ " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	function NEQInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'NEQ';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "NEQ " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	function LTInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'LT';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "LT " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	function LTEInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'LTE';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "LTE " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	function GTInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'GT';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "GT " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	function GTEInstruction(dest, src, executionUnit, comment) {
+		this.destination = dest;
+		this.source = src;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'GTE';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "GTE " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
+		}.bind(this);
+	}
+
+	//Branching
+	//Relative jump if equal
+	function RJEQInstruction(k, executionUnit, comment) {
+		this.offset = k;
+
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'RJEQ';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "RJEQ " + this.offset;
+		}.bind(this);
+	}
+
+	//Relative jump if not equal
+	function RJNEInstruction(k, executionUnit, comment) {
+		this.offset = k;
+
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'RJNE';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "RJNE " + _generateTargetString(this.offset);
 		}.bind(this);
 	}
 
@@ -1108,8 +1428,140 @@ function(TypeChecker, AST) {
 		}
 	}
 
-	function _compileBlock (statements, context) {
+	function _compileBlock (blockStatement, context) {
+		//essentially a copy of function
 
+		var map = [];
+		var varmap = [];
+
+		var blockContext = {
+			__parentContext: context
+		};
+
+		//we'll need to reset the EBP and ESP (similar to a function call)
+		var basePointerOffsets = {};
+		var bpOffset = 1; //get ready for local variables
+
+		var pendingInitializers = [];
+
+		for (var i = 0, len = blockStatement.body.length; i < len; i++) {
+			var statement = blockStatement.body[i];
+
+			if (statement.nodeType === "VariableDeclaration") {
+				var variables = _getVariables(statement);
+				for (var v = 0; v < variables.length; v++) {
+					var variable = variables[v];
+					if (blockContext[variable.name] !== undefined) {
+						throw new CompilerError("'" + variable.name + "' has already been declared", statement.loc);
+					}
+
+					blockContext[variable.name] = variable;
+
+					if (variable.initializer !== undefined) {
+						pendingInitializers.push({
+							name: variable.name,
+							initializer: variable.initializer
+						});
+					}
+
+					basePointerOffsets[variable.name] = bpOffset++;
+					var defaultVal;
+					if (variable.varType === "int" || variable.varType === "double")
+						defaultVal = 0;
+					else if (variable.varType === "boolean")
+						defaultVal = false;
+					else if (variable.varType === "string")
+						defaultVal = "";
+					varmap.push(new PUSHInstruction({
+						type: 'raw',
+						value: defaultVal,
+					}, statement, "Set up space for variable '" + variable.name + "' on stack"));
+				}
+			}
+			else if (statement.nodeType === "AssignmentExpression") {
+				var assignmentMap = _compileAssignment(statement, blockContext);
+				map = map.concat(assignmentMap);
+			}
+			else if (statement.nodeType === "CallExpression") {
+				var callMap = _compileFunctionCall(statement, blockContext);
+				map = map.concat(callMap);
+			}
+			else if (statement.nodeType === "IfStatement") {
+				var ifMap = _compileIfStatement(statement, blockContext);
+				map = map.concat(ifMap);
+			}
+		}
+
+		//handle initializers
+		for (var vi = 0; vi < pendingInitializers.length; vi++) {
+			var pInit = pendingInitializers[vi];
+			var varInfo = blockContext[pInit.name];
+			if (pInit.initializer.nodeType === "Literal") {
+				var value = pInit.initializer.value;
+				if (TypeChecker.typeCheck(varInfo.varType, value)) {
+					value = TypeChecker.coerceValue(varInfo.varType, value);
+
+					varmap.push(new MOVInstruction({
+						type: 'pointer',
+						value: 'EBP',
+						offset: basePointerOffsets[pInit.name]
+					}, {
+						type: 'raw',
+						value: value
+					}, pInit.initializer, "Assign value to variable '" + pInit.name +"'"));
+				}
+			}
+			else if (pInit.initializer.nodeType === "Identifier") {
+				var targetInfo = _getRawFromContext(pInit.initializer.label, blockContext, pInit.initializer.loc);
+				//If the variable was not declared in this block scope then we set it to be pending
+				var sourceValue;
+				if (blockContext[pInit.initializer.label] !== undefined) {
+					sourceValue = {
+						type: 'pointer',
+						value: 'EBP',
+						offset: basePointerOffsets[pInit.initializer.label]
+					}
+				}
+				else {
+					sourceValue = {
+						type: 'pendingVariable', 
+						value: pInit.name
+					}
+				}
+
+				varmap.push(new MOVInstruction({
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[pInit.name]
+				}, sourceValue, pInit.initializer, "Assign value to variable '" + pInit.name + "'"));
+
+			}
+			else if (pInit.initializer.nodeType === "BinaryExpression") {
+				var exprMap = _compileExpression(pInit.initializer, blockContext);
+				varmap = varmap.concat(exprMap);
+				varmap.push(new POPInstruction({
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[pInit.name]
+				}, pInit.initializer, "Move result of expression into variable '" + pInit.name + "'"));
+			}
+			else if (pInit.initializer.nodeType === "CallExpression") {
+				var callMap = _compileFunctionCall(pInit.initializer, blockContext);
+				varmap = varmap.concat(callMap);
+				varmap.push(new MOVInstruction({
+					type: 'pointer',
+					value: 'EBP',
+					offset: basePointerOffsets[pInit.name]
+				}, {
+					type: 'register',
+					value: 'RAX'
+				}, pInit.initializer, "Assign result of function call to variable '" + pInit.name + "'"));
+			}
+		}
+
+		map = varmap.concat(map);
+
+		return map;
 	}
 
 	function _compileExpression (statement, context) {
@@ -1188,6 +1640,66 @@ function(TypeChecker, AST) {
 						type: 'register',
 						value: 'R1'
 					}, statement, "Perform DIV operation on R0 and R1"));
+					break;
+				case "==":
+					//Just push the result (true/false)
+					map.push(new EQInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1',
+					}, statement, "Perform EQ operation on R0 and R1 and store in R0"));
+					break;
+				case "!=":
+					//Just push the result (true/false)
+					map.push(new NEQInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1',
+					}, statement, "Perform NEQ operation on R0 and R1 and store in R0"));
+					break;
+				case "<":
+					//Just push the result (true/false)
+					map.push(new LTInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1',
+					}, statement, "Perform LT operation on R0 and R1 and store in R0"));
+					break;
+				case "<=":
+					//Just push the result (true/false)
+					map.push(new LTEInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1',
+					}, statement, "Perform LTE operation on R0 and R1 and store in R0"));
+					break;
+				case ">":
+					//Just push the result (true/false)
+					map.push(new GTInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1',
+					}, statement, "Perform GT operation on R0 and R1 and store in R0"));
+					break;
+				case ">=":
+					//Just push the result (true/false)
+					map.push(new GTEInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1',
+					}, statement, "Perform GTE operation on R0 and R1 and store in R0"));
 					break;
 				default:
 					throw new CompilerError("Operation '" + statement.operator + "' is not supported yet", statement.loc);
@@ -1296,7 +1808,7 @@ function(TypeChecker, AST) {
 			map.push(new POPInstruction({
 				type: 'register',
 				value: 'R0'
-			}));
+			}, statement.right, "Put result of expression in R0"));
 			map.push(new MOVInstruction({
 				type: 'pendingVariable',
 				value: storageLocation,
@@ -1312,6 +1824,87 @@ function(TypeChecker, AST) {
 
 		//will need to set up place holders for the variable locations
 
+
+		return map;
+	}
+
+	function _compileIfStatement (statement, context) {
+		console.log('compiling if statement', statement);
+		var map = [];
+
+		//Some sanity checks
+		if (statement.condition.nodeType === "BinaryExpression") {
+			if (statement.condition.operator !== "<=" &&
+				statement.condition.operator !== ">=" &&
+				statement.condition.operator !== "<" &&
+				statement.condition.operator !== ">" &&
+				statement.condition.operator !== "==" &&
+				statement.condition.operator !== "!=") {
+				throw new CompilerError("Condition must resolve to boolean value", statement.condition.loc);
+			}
+			var exprMap = _compileExpression(statement.condition, context);
+			map = map.concat(exprMap);
+			//result is stores on the stack, pop it into R0
+			map.push(new POPInstruction({
+				type: 'register',
+				value: 'R0'
+			}, statement.condition, "Put result of expression in R0"));
+
+			//compare with true (this will set the zero flag if it's true)
+			map.push(new CMPInstruction({
+				type: 'register',
+				value: 'R0',
+			}, {
+				type: 'raw',
+				value: true
+			}, statement.condition, "Compare result with true"));
+
+			//do a RJNE (Relative Jump if NOT Equal) to a point AFTER the code block
+			var trueMap;
+			var elseMap;
+			//compile the else statement (if present)
+			if (statement.elseStatement) {
+				if (statement.elseStatement.nodeType === "BlockStatement") {
+					elseMap = _compileBlock(statement.elseStatement, context);
+				}
+				else if (statement.elseStatement.nodeType === "IfStatement") {
+					elseMap = _compileIfStatement(statement.elseStatement, context)
+				}
+				else {
+					throw new CompilerError("Expected a BlockStatement or IfStatement", statement.elseStatement.loc);
+				}
+			}
+			else {
+				elseMap = [];
+			}
+
+			if (statement.trueStatement.nodeType === "BlockStatement") {
+				trueMap = _compileBlock(statement.trueStatement, context);
+				trueMap.push(new RJMPInstruction({
+					type: 'raw',
+					value: elseMap.length
+				}, statement.trueStatement, "Jump past the else block"));
+
+				console.log('trueMap: ', trueMap);
+				_printAssembly(trueMap);
+				var trueMapLen = trueMap.length;
+				map.push(new RJNEInstruction({
+					type: 'raw',
+					value: trueMapLen
+				}, statement.trueStatement, "Continue execution if NOT equal"));
+				map = map.concat(trueMap);
+				map = map.concat(elseMap);
+			}
+			else {
+				throw new CompilerError("Expected a BlockStatement", statement.trueStatement.loc);
+			}
+		}
+		else if (statement.condition.nodeType === "Literal") {
+
+		}
+		else if (statement.condition.nodeType === "Identifier") {
+
+		}
 
 		return map;
 	}
@@ -1571,6 +2164,10 @@ function(TypeChecker, AST) {
 					}
 
 					memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
+				}
+				else if (statement.nodeType === 'IfStatement') {
+					var ifMap = _compileIfStatement(statement, functionContext);
+					memmap = memmap.concat(ifMap);
 				}
 			}
 		}
