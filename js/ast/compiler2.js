@@ -1,7 +1,7 @@
 define(['./typechecker', './ast'],
 function(TypeChecker, AST) {
 	//Compiler settings
-	var ALLOW_VARIABLES_IN_BLOCK = false;
+	var ALLOW_VARIABLES_IN_BLOCK = true;
 
 	//Errors
 	function CompilerError(message, loc) {
@@ -1617,6 +1617,31 @@ function(TypeChecker, AST) {
 			value: varCount
 		}, blockStatement, "Move stack pointer back " + varCount + " slots to remove variables"));
 
+		//fix any pending variables
+		for (var i = 0, len = map.length; i < len; i++) {
+			var stmt = map[i];
+			if (stmt.destination) {
+				if (stmt.destination.type === 'pendingVariable') {
+					var ebpOffset = basePointerOffsets[stmt.destination.value.name];
+					if (ebpOffset !== undefined) {
+						stmt.destination.type = "registerValue";
+						stmt.destination.value = "R7";
+						stmt.destination.offset = ebpOffset;
+					}
+				}
+			}
+			if (stmt.source) {
+				if (stmt.source.type === 'pendingVariable') {
+					var ebpOffset = basePointerOffsets[stmt.source.value.name];
+					if (ebpOffset !== undefined) {
+						stmt.source.type = "registerValue";
+						stmt.source.value = "R7";
+						stmt.source.offset = ebpOffset;
+					}
+				}
+			}
+		}
+
 		return map;
 	}
 
@@ -2498,7 +2523,7 @@ function(TypeChecker, AST) {
 			return obj.value + (obj.offset ? obj.offset : 0);
 		}
 		else if (obj.type === 'registerValue') {
-			return '[' + obj.value + '] ' + (obj.offset >= 0 ? '+' : '') + (obj.offset ? obj.offset : '');
+			return '[' + obj.value + '] ' + (obj.offset >= 0 ? '+' : '') + (obj.offset ? obj.offset : '0');
 		}
 	}
 
