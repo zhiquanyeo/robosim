@@ -111,7 +111,7 @@ function(TypeChecker, AST) {
 					var val = registers[addrInfo.value];
 					if (addrInfo.offset) 
 						val += addrInfo.offset;
-					return val;
+					return _stack[val];
 			}
 		}
 
