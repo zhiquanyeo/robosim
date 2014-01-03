@@ -1,5 +1,8 @@
 define(['./typechecker', './ast'],
 function(TypeChecker, AST) {
+	//Compiler settings
+	var ALLOW_VARIABLES_IN_BLOCK = false;
+
 	//Errors
 	function CompilerError(message, loc) {
 		this.message = message;
@@ -104,6 +107,11 @@ function(TypeChecker, AST) {
 					if (addrInfo.offset)
 						actualAddress += addrInfo.offset;
 					return actualAddress;
+				case 'registerValue':
+					var val = registers[addrInfo.value];
+					if (addrInfo.offset) 
+						val += addrInfo.offset;
+					return val;
 			}
 		}
 
@@ -117,6 +125,7 @@ function(TypeChecker, AST) {
 						_bp = _getValue(valueInfo);
 					else if (addrInfo.value === 'ESP')
 						_sp = _getValue(valueInfo);
+						//_stack = _stack.splice(0, _sp);
 					break;
 				case 'pointer':
 					var addr;
@@ -127,6 +136,12 @@ function(TypeChecker, AST) {
 					if (addrInfo.offset)
 						addr += addrInfo.offset;
 					_stack[addr] = _getValue(valueInfo);
+					break;
+				case 'registerValue':
+					var val = registers[addrInfo.value];
+					if (addrInfo.offset)
+						val += addrInfo.offset;
+					_stack[val] = _getValue(valueInfo);
 					break;
 				default:
 					console.error("Could not process setValue instruction");
@@ -167,14 +182,16 @@ function(TypeChecker, AST) {
 
 			switch (instruction.type) {
 				case "PUSH": {
-					_stack.push(_getValue(instruction.source));
+					_stack[_sp] = _getValue(instruction.source);
+					//_stack.push(_getValue(instruction.source));
 					_sp++;
 				} break;
 				case 'POP': {
 					_sp--;
 					_setValue(instruction.destination, {
 						type: 'raw',
-						value: _stack.pop()
+						value: _stack[_sp]
+						//value: _stack.pop()
 					});
 				} break;
 				case 'MOV': {
@@ -276,11 +293,12 @@ function(TypeChecker, AST) {
 				} break;
 
 				case 'RET': {
-					_sp = _bp;
-					_bp = _stack[_bp];
-					console.log ('new stack pointer:', _sp);
-					console.log('new base pointer:', _bp);
+					//_sp = _bp;
+					//_bp = _stack[_bp];
+					//console.log ('new stack pointer:', _sp);
+					//console.log('new base pointer:', _bp);
 					_pc = _stack[_sp-1];
+					_sp--;
 					console.log('pc: ', _pc);
 					console.log('--- returning from function ---');
 					_stack = _stack.slice(0, _sp);
@@ -1430,7 +1448,7 @@ function(TypeChecker, AST) {
 
 	function _compileBlock (blockStatement, context) {
 		//essentially a copy of function
-
+		//TODO: Right now we cannot specify variables in block statement
 		var map = [];
 		var varmap = [];
 
@@ -1440,14 +1458,34 @@ function(TypeChecker, AST) {
 
 		//we'll need to reset the EBP and ESP (similar to a function call)
 		var basePointerOffsets = {};
-		var bpOffset = 1; //get ready for local variables
+		var bpOffset = 0; //get ready for local variables
 
 		var pendingInitializers = [];
+
+		var setupmap = [];
+		if (ALLOW_VARIABLES_IN_BLOCK) {
+			//store ESP in R7
+			setupmap.push(new MOVInstruction({
+				type: 'register',
+				value: 'R7'
+			}, {
+				type: 'pointerAddress',
+				value: 'ESP'
+			}, blockStatement, 'Move ESP into R7'));
+
+
+		}
+
+		var varCount = 0;
 
 		for (var i = 0, len = blockStatement.body.length; i < len; i++) {
 			var statement = blockStatement.body[i];
 
 			if (statement.nodeType === "VariableDeclaration") {
+				if (!ALLOW_VARIABLES_IN_BLOCK) {
+					throw new CompilerError("Variable declarations are not allowed in block statements", statement.loc);
+				}
+
 				var variables = _getVariables(statement);
 				for (var v = 0; v < variables.length; v++) {
 					var variable = variables[v];
@@ -1472,10 +1510,12 @@ function(TypeChecker, AST) {
 						defaultVal = false;
 					else if (variable.varType === "string")
 						defaultVal = "";
+
 					varmap.push(new PUSHInstruction({
 						type: 'raw',
 						value: defaultVal,
 					}, statement, "Set up space for variable '" + variable.name + "' on stack"));
+					varCount++;
 				}
 			}
 			else if (statement.nodeType === "AssignmentExpression") {
@@ -1502,13 +1542,22 @@ function(TypeChecker, AST) {
 					value = TypeChecker.coerceValue(varInfo.varType, value);
 
 					varmap.push(new MOVInstruction({
-						type: 'pointer',
-						value: 'EBP',
+						type: 'registerValue',
+						value: 'R7',
 						offset: basePointerOffsets[pInit.name]
 					}, {
 						type: 'raw',
 						value: value
 					}, pInit.initializer, "Assign value to variable '" + pInit.name +"'"));
+
+					// varmap.push(new MOVInstruction({
+					// 	type: 'pointer',
+					// 	value: 'EBP',
+					// 	offset: basePointerOffsets[pInit.name]
+					// }, {
+					// 	type: 'raw',
+					// 	value: value
+					// }, pInit.initializer, "Assign value to variable '" + pInit.name +"'"));
 				}
 			}
 			else if (pInit.initializer.nodeType === "Identifier") {
@@ -1517,8 +1566,8 @@ function(TypeChecker, AST) {
 				var sourceValue;
 				if (blockContext[pInit.initializer.label] !== undefined) {
 					sourceValue = {
-						type: 'pointer',
-						value: 'EBP',
+						type: 'registerValue',
+						value: 'R7',
 						offset: basePointerOffsets[pInit.initializer.label]
 					}
 				}
@@ -1530,8 +1579,8 @@ function(TypeChecker, AST) {
 				}
 
 				varmap.push(new MOVInstruction({
-					type: 'pointer',
-					value: 'EBP',
+					type: 'registerValue',
+					value: 'R7',
 					offset: basePointerOffsets[pInit.name]
 				}, sourceValue, pInit.initializer, "Assign value to variable '" + pInit.name + "'"));
 
@@ -1540,8 +1589,8 @@ function(TypeChecker, AST) {
 				var exprMap = _compileExpression(pInit.initializer, blockContext);
 				varmap = varmap.concat(exprMap);
 				varmap.push(new POPInstruction({
-					type: 'pointer',
-					value: 'EBP',
+					type: 'registerValue',
+					value: 'R7',
 					offset: basePointerOffsets[pInit.name]
 				}, pInit.initializer, "Move result of expression into variable '" + pInit.name + "'"));
 			}
@@ -1549,8 +1598,8 @@ function(TypeChecker, AST) {
 				var callMap = _compileFunctionCall(pInit.initializer, blockContext);
 				varmap = varmap.concat(callMap);
 				varmap.push(new MOVInstruction({
-					type: 'pointer',
-					value: 'EBP',
+					type: 'registerValue',
+					value: 'R7',
 					offset: basePointerOffsets[pInit.name]
 				}, {
 					type: 'register',
@@ -1558,8 +1607,15 @@ function(TypeChecker, AST) {
 				}, pInit.initializer, "Assign result of function call to variable '" + pInit.name + "'"));
 			}
 		}
-
+		varmap = setupmap.concat(varmap);
 		map = varmap.concat(map);
+		map.push(new SUBInstruction({
+			type: 'pointerAddress',
+			value: 'ESP'
+		}, {
+			type: 'raw',
+			value: varCount
+		}, blockStatement, "Move stack pointer back " + varCount + " slots to remove variables"));
 
 		return map;
 	}
@@ -2035,7 +2091,15 @@ function(TypeChecker, AST) {
 			type: 'pendingFunctionCall',
 			value: funcName
 		}, statement, "Jump to function '" + funcName + "'"));
-		
+
+		//Tear down temp space
+		map.push(new SUBInstruction({
+			type: 'pointerAddress',
+			value: 'ESP'
+		}, {
+			type: 'raw',
+			value: statement.args.length
+		}, statement, "Move stack pointer back to pre-call position"));
 
 		return map;
 	}
@@ -2161,6 +2225,22 @@ function(TypeChecker, AST) {
 							type: 'register',
 							value: 'RAX'
 						}, statement, "Store return value in RAX"));
+
+						memmap.push(new MOVInstruction({
+							type: 'pointerAddress',
+							value: 'ESP'
+						}, {
+							type: 'pointerAddress',
+							value: 'EBP'
+						}, statement, "Tear down stack frame"));
+
+						memmap.push(new MOVInstruction({
+							type: 'pointerAddress',
+							value: 'EBP'
+						}, {
+							type: 'pointer',
+							value: 'ESP'
+						}, statement, "Tear down stack frame"));
 					}
 
 					memmap.push(new RETInstruction(statement, "Return from function '" + progStatement.name + "'"));
@@ -2236,6 +2316,23 @@ function(TypeChecker, AST) {
 			if (progStatement.type !== "void") {
 				throw new CompilerError("Function '" + progStatement.name + "' does not return a value. Expected to return type " + progStatement.type, progStatement.loc);
 			}
+
+			memmap.push(new MOVInstruction({
+				type: 'pointerAddress',
+				value: 'ESP'
+			}, {
+				type: 'pointerAddress',
+				value: 'EBP'
+			}, progStatement, "Tear down stack frame"));
+
+			memmap.push(new MOVInstruction({
+				type: 'pointerAddress',
+				value: 'EBP'
+			}, {
+				type: 'pointer',
+				value: 'ESP'
+			}, progStatement, "Tear down stack frame"));
+
 			//generate an implicit return statement
 			memmap.push(new RETInstruction(progStatement, "Return from function '" + progStatement.name + "'"));
 		}
@@ -2291,6 +2388,24 @@ function(TypeChecker, AST) {
 		//The EXT call will automatically pop the correct variables from the stack
 		map.push(new EXTInstruction('print', [{varType: 'string', name: 'str'}], null,
 			"External call to print function"));
+		map.push(new MOVInstruction({
+			type: 'pointerAddress',
+			value: 'ESP',
+		}, {
+			type: 'pointerAddress',
+			value: 'EBP'
+		}, null, "Tear down stack frame"));
+		map.push(new MOVInstruction({
+			type: 'pointerAddress',
+			value: 'EBP'
+		}, {
+			type: 'pointer',
+			value: 'ESP'
+		}, null, "Tear down stack frame"));
+		// map.push(new POPInstruction({
+		// 	type: 'pointerAddress',
+		// 	value: 'EBP'
+		// }, null, "Tear down stack frame"));
 		map.push(new RETInstruction(null, "Return from print"));
 		mapOffset = map.length;
 
@@ -2378,6 +2493,12 @@ function(TypeChecker, AST) {
 		}
 		else if (obj.type === 'pointerAddress') {
 			return obj.value + (obj.offset >= 0 ? '+' : '') + (obj.offset ? obj.offset : '');
+		}
+		else if (obj.type === 'address') {
+			return obj.value + (obj.offset ? obj.offset : 0);
+		}
+		else if (obj.type === 'registerValue') {
+			return '[' + obj.value + '] ' + (obj.offset >= 0 ? '+' : '') + (obj.offset ? obj.offset : '');
 		}
 	}
 
