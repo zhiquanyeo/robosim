@@ -49,6 +49,8 @@ function() {
 				return "" + value + "";
 
 			case "bool":
+				if (typeof value === "boolean")
+					return value;
 				var val = parseInt(value, 10);
 				if (isNaN(val)) return false;
 				return (val !== 0);
