@@ -101,6 +101,10 @@ function($, _, Robot, Field, RangeFinder,
                 }
             });
 
+            simulation.addEventHandler('simulationError', function(e) {
+                console.warn(e.message);
+            });
+
             startStopBtn.addEventListener('click', function() {
                 if (simulation.isRunning) {
                     simulation.stop();

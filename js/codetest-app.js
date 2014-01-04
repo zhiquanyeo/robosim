@@ -121,7 +121,7 @@ function(AST, Parser, Compiler) {
 				if (!program || !program.hasNextStatement())
 					return;
 
-				program.executeNext();
+				program.executeNextBlock();
 				resetPCDisplay();
 				regenerateStack();
 				regenerateRegisters();

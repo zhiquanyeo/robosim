@@ -12,6 +12,7 @@ function() {
 
 		var _playingField = field;
 		var _robot = robot;
+		var _program = program;
 
 		if (!field || !robot) {
 			console.error("Must specify Field and Robot!");
@@ -49,6 +50,13 @@ function() {
 		}
 
 		this.start = function() {
+			if (!program) {
+				_fireEvent('simulationError', {
+					message: 'No program has been loaded'
+				});
+				return;
+			}
+
 			if (!_isRunning) {
 				_lastTime = (new Date()).getTime();
 				_timerToken = setInterval(_doTimerTick, 100);

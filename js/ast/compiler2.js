@@ -4,6 +4,8 @@ function(TypeChecker, AST) {
 	var ALLOW_VARIABLES_IN_BLOCK = false;
 	var ALLOW_VARIABLE_DECLARATION_IN_FOR_LOOP = false;
 
+	var VERBOSE = false;
+
 	//Errors
 	function CompilerError(message, loc) {
 		this.message = message;
@@ -40,8 +42,12 @@ function(TypeChecker, AST) {
 		_pc = mainOffset;
 
 
-		console.log('---- Program ready ----');
-		console.log('_pc is set to ', _pc);
+		if (VERBOSE) console.log('---- Program ready ----');
+		if (VERBOSE) console.log('_pc is set to ', _pc);
+
+		this.reset = function() {
+			_pc = mainOffset;
+		}
 
 		this.getPC = function () {
 			return _pc;
@@ -150,21 +156,21 @@ function(TypeChecker, AST) {
 		}
 
 		function _printStackInfo() {
-			console.log("=== STACK ===");
-			console.log("Stack Pointer: ", _sp);
-			console.log("Base Pointer: ", _bp);
+			if (VERBOSE) if (VERBOSE) console.log("=== STACK ===");
+			if (VERBOSE) if (VERBOSE) console.log("Stack Pointer: ", _sp);
+			if (VERBOSE) if (VERBOSE) console.log("Base Pointer: ", _bp);
 			for (var i = 0, len = _stack.length; i < len; i++) {
-				console.log('[' + i + ']', _stack[i]);
+				if (VERBOSE) if (VERBOSE) console.log('[' + i + ']', _stack[i]);
 			}
-			console.log('=== END STACK ===');
+			if (VERBOSE) if (VERBOSE) console.log('=== END STACK ===');
 		}
 
 		function _printRegisters() {
-			console.log("=== REGISTERS ===");
+			if (VERBOSE) if (VERBOSE) console.log("=== REGISTERS ===");
 			for (var i in registers) {
-				console.log("'" + i + "' - ", registers[i]);
+				if (VERBOSE) if (VERBOSE) console.log("'" + i + "' - ", registers[i]);
 			}
-			console.log("=== END REGISTERS ===");
+			if (VERBOSE) if (VERBOSE) console.log("=== END REGISTERS ===");
 		}
 
 		function _printInfo() {
@@ -172,11 +178,37 @@ function(TypeChecker, AST) {
 			_printRegisters();
 		}
 
+		//This executes in blocks
+		var _lastContext;
+		this.executeNextBlock = function () {
+			if (_pc >= _progmem.length || _pc < 0)
+				return false;
+
+			var instruction = _progmem[_pc];
+			if (instruction.executionUnit != _lastContext) {
+				_lastContext = instruction.executionUnit;
+			}
+
+			while (this.getCurrentInstruction() && 
+				this.getCurrentInstruction().executionUnit == _lastContext &&
+				this.hasNextStatement()) {
+
+				this.executeNext();
+			}
+
+			return this.hasNextStatement();
+		}
+
+		this.getCurrentInstruction = function () {
+			return _progmem[_pc];
+		}
+
 		//returns true if statement was executed, false otherwise
 		this.executeNext = function() {
 			if (_pc >= _progmem.length || _pc < 0)
 				return false;
-			console.log('-- pc:', _pc);
+
+			if (VERBOSE) console.log('-- pc:', _pc);
 			var instruction = _progmem[_pc];
 			//increment the pc here
 			_pc++;
@@ -224,7 +256,7 @@ function(TypeChecker, AST) {
 				} break;
 				case 'CALL': {
 					_pc = _getValue(instruction.offset);
-					console.log('setting PC to ', _getValue(instruction.offset));
+					if (VERBOSE) if (VERBOSE) console.log('setting PC to ', _getValue(instruction.offset));
 				} break;
 
 				case 'EQ': {
@@ -282,7 +314,7 @@ function(TypeChecker, AST) {
 
 				//Experimental
 				case 'EXT': {
-					console.log('running external:', instruction);
+					if (VERBOSE) if (VERBOSE) console.log('running external:', instruction);
 					//Get the list of parameters ready
 					var numParams = instruction.data.length;
 					var data = [];
@@ -293,7 +325,7 @@ function(TypeChecker, AST) {
 							offset: -2 - i,
 						}));
 					}
-					console.log('passing parameters: ', data);
+					if (VERBOSE) if (VERBOSE) console.log('passing parameters: ', data);
 					if (_externalFunctions[instruction.command])
 						_externalFunctions[instruction.command].apply(null, data);
 				} break;
@@ -301,12 +333,12 @@ function(TypeChecker, AST) {
 				case 'RET': {
 					//_sp = _bp;
 					//_bp = _stack[_bp];
-					//console.log ('new stack pointer:', _sp);
-					//console.log('new base pointer:', _bp);
+					//if (VERBOSE) if (VERBOSE) console.log ('new stack pointer:', _sp);
+					//if (VERBOSE) if (VERBOSE) console.log('new base pointer:', _bp);
 					_pc = _stack[_sp-1];
 					_sp--;
-					console.log('pc: ', _pc);
-					console.log('--- returning from function ---');
+					if (VERBOSE) if (VERBOSE) console.log('pc: ', _pc);
+					if (VERBOSE) if (VERBOSE) console.log('--- returning from function ---');
 					_stack = _stack.slice(0, _sp);
 					
 				} break;
@@ -1456,7 +1488,7 @@ function(TypeChecker, AST) {
 					}
 				}
 				else {
-					console.log('value: ', value);
+					if (VERBOSE) if (VERBOSE) console.log('value: ', value);
 					if (TypeChecker.typeCheck(variable.varType, value)) {
 						value = TypeChecker.coerceValue(variable.varType, value);
 					}
@@ -1687,7 +1719,7 @@ function(TypeChecker, AST) {
 
 	function _compileExpression (statement, context) {
 		//The idea is that the result will always be stored in R0
-		console.log('compiling expression', statement);
+		if (VERBOSE) console.log('compiling expression', statement);
 		var map = [];
 
 		//do the operation and push the result on to the stack
@@ -1836,7 +1868,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileAssignment (statement, context) {
-		console.log('compiling assignment expression: ', statement);
+		if (VERBOSE) console.log('compiling assignment expression: ', statement);
 
 		var map = [];
 
@@ -1863,7 +1895,7 @@ function(TypeChecker, AST) {
 			}
 			storageLocation.name = statement.left.base.label;
 
-			console.log('index: ', statement.left.property);
+			if (VERBOSE) console.log('index: ', statement.left.property);
 
 			if (statement.left.property.nodeType === "Literal") {
 				if (statement.left.property.type !== "NumericLiteral") {
@@ -1895,7 +1927,7 @@ function(TypeChecker, AST) {
 		if (statement.right.cfold) {
 			newRight = statement.right.cfold();
 		}
-		console.log('newRight: ', newRight);
+		if (VERBOSE) console.log('newRight: ', newRight);
 
 		//if it's a literal, we just need to do the assignment
 		if (newRight.nodeType === "Literal") {
@@ -1957,7 +1989,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileIfStatement (statement, context) {
-		console.log('compiling if statement', statement);
+		if (VERBOSE) console.log('compiling if statement', statement);
 		var map = [];
 
 		//Some sanity checks
@@ -2013,7 +2045,7 @@ function(TypeChecker, AST) {
 					value: elseMap.length
 				}, statement.trueStatement, "Jump past the else block"));
 
-				console.log('trueMap: ', trueMap);
+				if (VERBOSE) console.log('trueMap: ', trueMap);
 				_printAssembly(trueMap);
 				var trueMapLen = trueMap.length;
 				map.push(new RJNEInstruction({
@@ -2038,7 +2070,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileForLoop (statement, context) {
-		console.log('compiling for loop', statement);
+		if (VERBOSE) console.log('compiling for loop', statement);
 		var map = [];
 
 		/* 
@@ -2104,7 +2136,7 @@ function(TypeChecker, AST) {
 
 	function _compileWhileLoop (statement, context) {
 		//a while loop is a if statement with the check, followed by the do-while
-		console.log('compiling while loop', statement);
+		if (VERBOSE) console.log('compiling while loop', statement);
 
 		var map = [];
 
@@ -2137,7 +2169,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileDoWhileLoop (statement, context) {
-		console.log('compiling do-while statement', statement);
+		if (VERBOSE) console.log('compiling do-while statement', statement);
 
 		var map = [];
 
@@ -2173,7 +2205,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileFunctionCall (statement, context) {
-		console.log('compiling call expression', statement);
+		if (VERBOSE) console.log('compiling call expression', statement);
 		var map = [];
 
 		var funcName;
@@ -2190,9 +2222,9 @@ function(TypeChecker, AST) {
 			nameParts.unshift(base.label);
 			funcName = nameParts.join('~');
 		}
-		console.log('=== Generating code for call to function ' + funcName);
+		if (VERBOSE) console.log('=== Generating code for call to function ' + funcName);
 		var funcInfo = _getRawFromContext(funcName, context, statement.callee.loc);
-		console.log('funcInfo: ', funcInfo);
+		if (VERBOSE) console.log('funcInfo: ', funcInfo);
 		if (statement.args.length != funcInfo.parameters.length) {
 			throw new CompilerError("Incorrect number of arguments passed to function '" +
 				funcName + "'. Expected " + funcInfo.parameters.length + " but received " +
@@ -2365,7 +2397,7 @@ function(TypeChecker, AST) {
 						}
 
 						basePointerOffsets[variable.name] = bpOffset++;
-						console.log('variable: ', variable);
+						if (VERBOSE) console.log('variable: ', variable);
 						var defaultVal;
 						if (variable.varType === "int" || variable.varType === "double")
 							defaultVal = 0;
@@ -2381,7 +2413,7 @@ function(TypeChecker, AST) {
 				}
 				else if (statement.nodeType === "AssignmentExpression") {
 					var assignmentMap = _compileAssignment(statement, functionContext);
-					console.log('assignmentMap: ', assignmentMap);
+					if (VERBOSE) console.log('assignmentMap: ', assignmentMap);
 					memmap = memmap.concat(assignmentMap);
 				}
 				else if (statement.nodeType === "CallExpression") {
@@ -2391,7 +2423,7 @@ function(TypeChecker, AST) {
 				else if (statement.nodeType === "ReturnStatement") {
 					hasReturn = true;
 					if (statement.argument) {
-						console.log('return statement has arg', statement.argument);
+						if (VERBOSE) console.log('return statement has arg', statement.argument);
 						if (progStatement.type === "void") {
 							throw new CompilerError("Attempting to return value from void function", statement.loc);
 						}
@@ -2552,9 +2584,9 @@ function(TypeChecker, AST) {
 
 		}
 
-		//console.log('Function Context: ', functionContext);
-		//console.log("Base Pointer Offsets: ", basePointerOffsets);
-		//console.log('memmap: ', memmap);
+		//if (VERBOSE) console.log('Function Context: ', functionContext);
+		//if (VERBOSE) console.log("Base Pointer Offsets: ", basePointerOffsets);
+		//if (VERBOSE) console.log('memmap: ', memmap);
 
 		//_printAssembly(memmap);
 
@@ -2598,7 +2630,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compile (programAST, builtIns) {
-		console.log("======= COMPILER 2 ========");
+		if (VERBOSE) console.log("======= COMPILER 2 ========");
 		//Global variables, the _data segment
 		var _data = {};
 
@@ -2679,9 +2711,9 @@ function(TypeChecker, AST) {
 		}
 
 		//This stores global scope!
-		console.log("Context: ", _context);
+		if (VERBOSE) console.log("Context: ", _context);
 
-		console.log("=== The Program ===");
+		if (VERBOSE) console.log("=== The Program ===");
 		_printAssembly(_memmap);
 
 		if (_functions["main"] === undefined) {
@@ -2695,7 +2727,7 @@ function(TypeChecker, AST) {
 			var item = builtIns[i];
 			program.registerExternalFunction(item.name, item.implementation);
 		}
-		
+
 		return program;
 	}
 
@@ -2721,14 +2753,14 @@ function(TypeChecker, AST) {
 	}
 
 	function _printAssembly (memmap) {
-		console.log('=== ASSEMBLY INSTRUCTIONS ===');
+		if (VERBOSE) console.log('=== ASSEMBLY INSTRUCTIONS ===');
 		for (var i = 0, len = memmap.length; i < len; i++) {
 			var statement = memmap[i];
 			var str = statement.toString();
 			if (statement.comment) {
 				str += "\t\t;" + statement.comment;
 			}
-			console.log('[' + i + ']\t' + str);
+			if (VERBOSE) console.log('[' + i + ']\t' + str);
 		}
 	}
 

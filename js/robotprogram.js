@@ -1,6 +1,6 @@
 define([],
 function() {
-	function RobotProgram(ast) {
+	function RobotProgram(ast, robotObj) {
 		
 	}
 
