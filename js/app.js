@@ -123,14 +123,21 @@ function($, _, Robot, Field, RangeFinder,
 
             var robotProgram;
 
-            //EXPERIMENT
-            var expression = "2 * a + 0 * 2";
-            var result = Parser.parse(expression);
-            console.log('Expression: ', expression);
-            console.log('Before cfolding', result);
-            var newResult = result.statements[0].cfold();
-            console.log('after cfolding', newResult);
-            //END EXPERIMENT
+            function builtInPrint(str) {
+                console.log("[PROGRAM OUTPUT] " + str);
+            }
+
+            var builtIns = [
+                {
+                    name: 'print',
+                    retType: 'void',
+                    parameters: [{
+                        varType: 'string',
+                        name: 'str'
+                    }],
+                    implementation: builtInPrint
+                }
+            ]
 
             forwardBtn.addEventListener('click', function() {
                 try {

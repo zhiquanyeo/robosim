@@ -136,6 +136,22 @@ function(AST, Parser, Compiler) {
 				}
 			});
 
+			function printToScreen(str) {
+				outputArea.innerHTML += "[PROGRAM OUTPUT] " + str + "\n";
+			}
+
+			var builtIns = [
+				{
+					name: 'print',
+					retType: 'void',
+					parameters: [{
+						varType: 'string',
+						name: 'str',
+					}],
+					implementation: printToScreen
+				}
+			];
+
 			compileButton.addEventListener('click', function() {
 				editor.getSession().clearAnnotations();
 				if (errorLine !== null) {
@@ -144,11 +160,7 @@ function(AST, Parser, Compiler) {
 				}
 				try {
 					var result = Parser.parse(editor.getSession().getValue());
-					program = Compiler.compile(result);
-
-					program.registerExternalFunction('print', function(str) {
-						outputArea.innerHTML += "[PROGRAM OUTPUT] " + str + "\n";
-					});
+					program = Compiler.compile(result, builtIns);
 
 					instructionArea.innerHTML = '';
 

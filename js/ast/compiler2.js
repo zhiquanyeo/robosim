@@ -2561,51 +2561,43 @@ function(TypeChecker, AST) {
 		return memmap;
 	}
 
-	function _installBuiltIns(functionList, context) {
+	function _installBuiltIns(list, functionList, context) {
 		var map = [];
-		var mapOffset = 0;
+		mapOffset = 0;
 
-		//Register the PRINT function
-		functionList["print"] = mapOffset;
-		context["print"] = {
-			type: 'function',
-			retType: 'void',
-			parameters: [{
-				varType: 'string',
-				name: 'str'
-			}]
-		};
+		for (var i = 0, len = list.length; i < len; i++) {
+			var item = list[i];
+			functionList[item.name] = mapOffset;
+			context[item.name] = {
+				type: 'function',
+				retType: item.retType,
+				parameters: item.parameters
+			}
 
-		//The EXT call will automatically pop the correct variables from the stack
-		map.push(new EXTInstruction('print', [{varType: 'string', name: 'str'}], null,
-			"External call to print function"));
-		map.push(new MOVInstruction({
-			type: 'pointerAddress',
-			value: 'ESP',
-		}, {
-			type: 'pointerAddress',
-			value: 'EBP'
-		}, null, "Tear down stack frame"));
-		map.push(new MOVInstruction({
-			type: 'pointerAddress',
-			value: 'EBP'
-		}, {
-			type: 'pointer',
-			value: 'ESP'
-		}, null, "Tear down stack frame"));
-		// map.push(new POPInstruction({
-		// 	type: 'pointerAddress',
-		// 	value: 'EBP'
-		// }, null, "Tear down stack frame"));
-		map.push(new RETInstruction(null, "Return from print"));
-		mapOffset = map.length;
+			map.push(new EXTInstruction(item.name, item.parameters, null, "External call to " + item.name + " function"));
+			map.push(new MOVInstruction({
+				type: 'pointerAddress',
+				value: 'ESP',
+			}, {
+				type: 'pointerAddress',
+				value: 'EBP',
+			}, null, "Tear down stack frame"));
+			map.push(new MOVInstruction({
+				type: 'pointerAddress',
+				value: 'EBP'
+			}, {
+				type: 'pointer',
+				value: 'ESP'
+			}, null, "Tear down stack frame"));
 
-		//Add any more functions here
+			map.push(new RETInstruction(null, "Return from " + item.name));
+			mapOffset = map.length;
+		}
 
 		return map;
 	}
 
-	function _compile (programAST) {
+	function _compile (programAST, builtIns) {
 		console.log("======= COMPILER 2 ========");
 		//Global variables, the _data segment
 		var _data = {};
@@ -2620,7 +2612,7 @@ function(TypeChecker, AST) {
 		var _memmap = [];
 		var _mapOffset = 0;
 
-		_memmap = _memmap.concat(_installBuiltIns(_functions, _context));
+		_memmap = _memmap.concat(_installBuiltIns(builtIns, _functions, _context));
 		_mapOffset = _memmap.length;
 
 		//Hoist function declarations to the top
@@ -2698,6 +2690,12 @@ function(TypeChecker, AST) {
 
 		var program = new Program(_memmap, _functions["main"]);
 
+		//register the builtin implementations
+		for (var i = 0, len = builtIns.length; i < len; i++) {
+			var item = builtIns[i];
+			program.registerExternalFunction(item.name, item.implementation);
+		}
+		
 		return program;
 	}
 
