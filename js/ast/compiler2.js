@@ -2,6 +2,7 @@ define(['./typechecker', './ast'],
 function(TypeChecker, AST) {
 	//Compiler settings
 	var ALLOW_VARIABLES_IN_BLOCK = true;
+	var ALLOW_VARIABLE_DECLARATION_IN_FOR_LOOP = false;
 
 	//Errors
 	function CompilerError(message, loc) {
@@ -2030,11 +2031,102 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileForLoop (statement, context) {
+		console.log('compiling for loop', statement);
+		var map = [];
 
+		/* 
+		Form:
+		for (init; condition; increment) {
+			body
+		}
+
+		becomes
+
+		init;
+		if (condition) {
+			do {
+				body
+				increment
+			} while (condition)
+		}
+		*/
+
+		var initMap = [];
+		var whileMap = [];
+
+		if (statement.initializer) {
+			if (statement.initializer.nodeType === "VariableDeclaration") {
+				if (!ALLOW_VARIABLE_DECLARATION_IN_FOR_LOOP) {
+					throw new CompilerError("Variable declarations are not allowed in for loop initializer", statement.initializer.loc);
+				}
+				else {
+					//TODO Implement
+				}
+			}
+			else if (statement.initializer.nodeType === "AssignmentExpression") {
+				initMap = _compileAssignment(statement.initializer, context);
+			}
+			else {
+				//throw an error for now
+				throw new CompilerError("For loop initializer should either be empty or an assignment expression", statement.initializer.loc);
+			}
+		}
+
+		//we need to inject the increment operation into the body
+		if (statement.body && statement.body.nodeType === "BlockStatement") {
+			if (statement.body.body) {
+				if (statement.update) {
+					statement.body.body.push(statement.update);
+				}
+			}
+			else {
+				throw new CompilerError("Empty for-loop body is not allowed", statement.body.loc);
+			}
+		}
+		else {
+			throw new CompilerError("Body of for loop must be a block statement", statement.body ? statement.body.loc : statement.loc);
+		}
+
+		whileMap = _compileWhileLoop(statement, context);
+
+		map = map.concat(initMap);
+		map = map.concat(whileMap);
+
+		return map;
 	}
 
 	function _compileWhileLoop (statement, context) {
+		//a while loop is a if statement with the check, followed by the do-while
+		console.log('compiling while loop', statement);
 
+		var map = [];
+
+		var doWhileMap = _compileDoWhileLoop(statement, context);
+
+		//do the compare
+		var compareMap = _compileExpression(statement.condition, context);
+		compareMap.push(new POPInstruction({
+			type: 'register',
+			value: 'R0'
+		}, statement.condition, "Pop value of condition expression from stack into R0"));
+
+		compareMap.push(new CMPInstruction({
+			type: 'register',
+			value: 'R0'
+		}, {
+			type: 'raw',
+			value: true
+		}, statement.condition, "Compare with true"));
+
+		compareMap.push(new RJNEInstruction({
+			type: 'raw',
+			value: doWhileMap.length
+		}, statement.condition, "Jump past loop body if condition not met"));
+
+		map = map.concat(compareMap);
+		map = map.concat(doWhileMap);
+
+		return map;
 	}
 
 	function _compileDoWhileLoop (statement, context) {
@@ -2348,6 +2440,14 @@ function(TypeChecker, AST) {
 				else if (statement.nodeType === 'DoWhileStatement') {
 					var doWhileMap = _compileDoWhileLoop(statement, functionContext);
 					memmap = memmap.concat(doWhileMap);
+				}
+				else if (statement.nodeType === 'WhileStatement') {
+					var whileMap = _compileWhileLoop(statement, functionContext);
+					memmap = memmap.concat(whileMap);
+				}
+				else if (statement.nodeType === 'ForStatement') {
+					var forMap = _compileForLoop(statement, functionContext);
+					memmap = memmap.concat(forMap);
 				}
 			}
 		}

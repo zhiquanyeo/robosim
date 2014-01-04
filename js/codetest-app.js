@@ -15,6 +15,7 @@ function(AST, Parser, Compiler) {
 			var compileButton = document.getElementById('btnCompile');
 			var stepNextButton = document.getElementById('btnStepNext');
 			var clearOutputButton = document.getElementById('btnClearOutput');
+			var runButton = document.getElementById('btnRun');
 
 			var outputArea = document.getElementById('outputArea');
 			var instructionArea = document.getElementById('instructions');
@@ -124,6 +125,15 @@ function(AST, Parser, Compiler) {
 				resetPCDisplay();
 				regenerateStack();
 				regenerateRegisters();
+			});
+
+			runButton.addEventListener('click', function() {
+				while (program.hasNextStatement()) {
+					program.executeNext();
+					resetPCDisplay();
+					regenerateStack();
+					regenerateRegisters();
+				}
 			});
 
 			compileButton.addEventListener('click', function() {
