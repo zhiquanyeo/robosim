@@ -105,6 +105,12 @@ function($, _, Robot, Field, RangeFinder,
                 console.warn(e.message);
             });
 
+            simulation.addEventHandler('simulationOutput', function(output) {
+                if (output.type === 'output') {
+                    console.log('[SIM OUTPUT] ' + output.message);
+                }
+            });
+
             startStopBtn.addEventListener('click', function() {
                 if (simulation.isRunning) {
                     simulation.stop();
@@ -151,7 +157,9 @@ function($, _, Robot, Field, RangeFinder,
                     // robotProgram.execute({});
 
                     //Compiler.compile(result);
-                    Compiler2.compile(result);
+                    // Compiler2.compile(result);
+
+                    simulation.loadProgramAST(result);
                 }
                 catch (e) {
                     if (e instanceof ReferenceError || e instanceof TypeError) {

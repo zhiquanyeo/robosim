@@ -156,21 +156,21 @@ function(TypeChecker, AST) {
 		}
 
 		function _printStackInfo() {
-			if (VERBOSE) if (VERBOSE) console.log("=== STACK ===");
-			if (VERBOSE) if (VERBOSE) console.log("Stack Pointer: ", _sp);
-			if (VERBOSE) if (VERBOSE) console.log("Base Pointer: ", _bp);
+			if (VERBOSE) console.log("=== STACK ===");
+			if (VERBOSE) console.log("Stack Pointer: ", _sp);
+			if (VERBOSE) console.log("Base Pointer: ", _bp);
 			for (var i = 0, len = _stack.length; i < len; i++) {
-				if (VERBOSE) if (VERBOSE) console.log('[' + i + ']', _stack[i]);
+				if (VERBOSE) console.log('[' + i + ']', _stack[i]);
 			}
-			if (VERBOSE) if (VERBOSE) console.log('=== END STACK ===');
+			if (VERBOSE) console.log('=== END STACK ===');
 		}
 
 		function _printRegisters() {
-			if (VERBOSE) if (VERBOSE) console.log("=== REGISTERS ===");
+			if (VERBOSE) console.log("=== REGISTERS ===");
 			for (var i in registers) {
-				if (VERBOSE) if (VERBOSE) console.log("'" + i + "' - ", registers[i]);
+				if (VERBOSE) console.log("'" + i + "' - ", registers[i]);
 			}
-			if (VERBOSE) if (VERBOSE) console.log("=== END REGISTERS ===");
+			if (VERBOSE) console.log("=== END REGISTERS ===");
 		}
 
 		function _printInfo() {
@@ -256,7 +256,7 @@ function(TypeChecker, AST) {
 				} break;
 				case 'CALL': {
 					_pc = _getValue(instruction.offset);
-					if (VERBOSE) if (VERBOSE) console.log('setting PC to ', _getValue(instruction.offset));
+					if (VERBOSE) console.log('setting PC to ', _getValue(instruction.offset));
 				} break;
 
 				case 'EQ': {
@@ -314,7 +314,7 @@ function(TypeChecker, AST) {
 
 				//Experimental
 				case 'EXT': {
-					if (VERBOSE) if (VERBOSE) console.log('running external:', instruction);
+					if (VERBOSE) console.log('running external:', instruction);
 					//Get the list of parameters ready
 					var numParams = instruction.data.length;
 					var data = [];
@@ -325,7 +325,7 @@ function(TypeChecker, AST) {
 							offset: -2 - i,
 						}));
 					}
-					if (VERBOSE) if (VERBOSE) console.log('passing parameters: ', data);
+					if (VERBOSE) console.log('passing parameters: ', data);
 					if (_externalFunctions[instruction.command])
 						_externalFunctions[instruction.command].apply(null, data);
 				} break;
@@ -333,12 +333,12 @@ function(TypeChecker, AST) {
 				case 'RET': {
 					//_sp = _bp;
 					//_bp = _stack[_bp];
-					//if (VERBOSE) if (VERBOSE) console.log ('new stack pointer:', _sp);
-					//if (VERBOSE) if (VERBOSE) console.log('new base pointer:', _bp);
+					//if (VERBOSE) console.log ('new stack pointer:', _sp);
+					//if (VERBOSE) console.log('new base pointer:', _bp);
 					_pc = _stack[_sp-1];
 					_sp--;
-					if (VERBOSE) if (VERBOSE) console.log('pc: ', _pc);
-					if (VERBOSE) if (VERBOSE) console.log('--- returning from function ---');
+					if (VERBOSE) console.log('pc: ', _pc);
+					if (VERBOSE) console.log('--- returning from function ---');
 					_stack = _stack.slice(0, _sp);
 					
 				} break;
@@ -1488,7 +1488,7 @@ function(TypeChecker, AST) {
 					}
 				}
 				else {
-					if (VERBOSE) if (VERBOSE) console.log('value: ', value);
+					if (VERBOSE) console.log('value: ', value);
 					if (TypeChecker.typeCheck(variable.varType, value)) {
 						value = TypeChecker.coerceValue(variable.varType, value);
 					}

@@ -5,14 +5,15 @@ and a robot. This will be the interface by which the outside world starts
 and stops the robot.
 
 */
-define([],
-function() {
+define(['ast/compiler2'],
+function(Compiler) {
 
-	function Simulation(field, robot, program) {
+	function Simulation(field, robot, programAST) {
 
 		var _playingField = field;
 		var _robot = robot;
-		var _program = program;
+		var _programAST = programAST;
+		var _program;
 
 		if (!field || !robot) {
 			console.error("Must specify Field and Robot!");
@@ -33,6 +34,53 @@ function() {
 			}
 		});
 
+		//==== Built in functions for the robot program
+		function _printImplementation(str) {
+			_fireEvent('simulationOutput', {
+				type: 'output',
+				message: str
+			});
+		}
+
+		function _robotSetSpeedImplementation(speed) {
+			_robot.speed = speed;
+		}
+
+		function _robotSetRotationImpl(rotSpeed) {
+			_robot.rotationalSpeed = rotSpeed;
+		}
+
+
+		var builtInFunctions = [
+			{
+				name: 'print',
+				retType: 'void',
+				parameters: [{
+					varType: 'string',
+					name: 'str'
+				}],
+				implementation: _printImplementation
+			},
+			{
+				name: 'Robot~setSpeed',
+				retType: 'void',
+				parameters: [{
+					varType: 'double',
+					name: 'speed'
+				}],
+				implementation: _robotSetSpeedImplementation
+			},
+			{
+				name: 'Robot~setTurnSpeed',
+				retType: 'void',
+				parameters: [{
+					varType: 'double',
+					name: 'rotSpeed'
+				}],
+				implementation: _robotSetRotationImpl
+			},
+		];
+
 		//==== Startup routines ====
 		// set up the event handler for the robot
 
@@ -42,15 +90,34 @@ function() {
 			var currTime = (new Date()).getTime();
 			var deltaTime = currTime - _lastTime;
 
-			//TODO Execute whatever code needs to be executed (via parser)
+			//Execute codeblock
+			if (_program && _program.hasNextStatement()) {
+				_program.executeNextBlock();
+			}
+			else {
+				_fireEvent('simulationError', {
+					message: 'Program has terminated'
+				});
+				_stopSimulation();
+				return;
+			}
 
 			_robot.processTick(deltaTime);
 
 			_lastTime = currTime;
 		}
 
+		function _stopSimulation() {
+			if (_timerToken) {
+				clearInterval(_timerToken);
+				_timerToken = null;
+				_isRunning = false;
+				_fireEvent('runStateChanged', false);
+			}
+		}
+
 		this.start = function() {
-			if (!program) {
+			if (!_program) {
 				_fireEvent('simulationError', {
 					message: 'No program has been loaded'
 				});
@@ -65,14 +132,14 @@ function() {
 			}
 		};
 
-		this.stop = function() {
-			if (_timerToken) {
-				clearInterval(_timerToken);
-				_timerToken = null;
-				_isRunning = false;
-				_fireEvent('runStateChanged', false);
-			}
-		};
+		this.stop = _stopSimulation;
+
+		this.loadProgramAST = function(ast) {
+			//This will load and compile
+			_programAST = ast;
+
+			_program = Compiler.compile(ast, builtInFunctions);
+		}
 
 		this.reset = function() {
 
