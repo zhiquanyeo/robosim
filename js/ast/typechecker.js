@@ -8,8 +8,8 @@ function() {
 		switch (refType) {
 			case "int":
 			case "double":
-			case "boolean":
-				return (testType === "int" || testType == "double" || testType == "boolean");
+			case "bool":
+				return (testType === "int" || testType == "double" || testType == "bool");
 			case "string":
 				return true;
 		}
@@ -22,7 +22,7 @@ function() {
 			case "double":
 				return (typeof value === "number");
 
-			case "boolean": //we accept boolean, and number
+			case "bool": //we accept boolean, and number
 				return (typeof value === "boolean" || typeof value === "number");
 
 			case "string": //we'll take ANYTHING
@@ -48,7 +48,7 @@ function() {
 			case "string":
 				return "" + value + "";
 
-			case "boolean":
+			case "bool":
 				var val = parseInt(value, 10);
 				if (isNaN(val)) return false;
 				return (val !== 0);
@@ -84,7 +84,7 @@ function() {
 		if (hasDouble && !hasInt && !hasString && !hasBoolean)
 			return "double";
 		if (hasBoolean && !hasInt && !hasString && !hasDouble)
-			return "boolean";
+			return "bool";
 		if (hasString && !hasInt && !hasDouble && !hasBoolean)
 			return "string";
 
@@ -93,7 +93,7 @@ function() {
 		if (hasInt && !hasDouble && !hasString) //we can convert bool/int -> int
 			return "int";
 		if (hasBoolean && !hasString) // we can convert int/double/bool -> bool
-			return "boolean";
+			return "bool";
 		if (hasString)
 			return "string";
 		else

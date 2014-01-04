@@ -1065,6 +1065,7 @@ TypeSpecifier
 /"void"
 /"string"
 /"double"
+/"bool"
 
 VariableDeclarationList
   = head:VariableDeclaration tail:(__ "," __ VariableDeclaration)* {

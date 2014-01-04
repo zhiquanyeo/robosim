@@ -1473,7 +1473,7 @@ function(TypeChecker, AST) {
 					case "double":
 						variable.value = 0;
 						break;
-					case "boolean":
+					case "bool":
 						variable.value = false;
 						break;
 					case "string":
@@ -1546,7 +1546,7 @@ function(TypeChecker, AST) {
 					var defaultVal;
 					if (variable.varType === "int" || variable.varType === "double")
 						defaultVal = 0;
-					else if (variable.varType === "boolean")
+					else if (variable.varType === "bool")
 						defaultVal = false;
 					else if (variable.varType === "string")
 						defaultVal = "";
@@ -1941,6 +1941,13 @@ function(TypeChecker, AST) {
 		else if (newRight.nodeType === "CallExpression") {
 			var callMap = _compileFunctionCall(newRight, context);
 			map = map.concat(callMap);
+			map.push(new MOVInstruction({
+				type: 'pendingVariable',
+				value: storageLocation
+			}, {
+				type: 'register',
+				value: 'RAX'
+			}, statement.right, "Assign result of function call to variable '" + storageLocation.name + "'"));
 		}
 
 		//will need to set up place holders for the variable locations
@@ -2203,7 +2210,7 @@ function(TypeChecker, AST) {
 				switch (paramInfo.varType) {
 					case "int":
 					case "double":
-					case "boolean":
+					case "bool":
 						if (argument.type === "NumericLiteral" || argument.type === "BooleanLiteral") {
 							map.push(new PUSHInstruction({
 								type: 'raw',
@@ -2229,7 +2236,7 @@ function(TypeChecker, AST) {
 				switch (paramInfo.varType) {
 					case "int":
 					case "double":
-					case "boolean":
+					case "bool":
 						if (varInfo.varType === "string") {
 							throw new CompilerError("Attempting to pass value of type string as parameter #" + i + " of type " + paramInfo.varType, statement.loc);
 						}
@@ -2378,7 +2385,7 @@ function(TypeChecker, AST) {
 						var defaultVal;
 						if (variable.varType === "int" || variable.varType === "double")
 							defaultVal = 0;
-						else if (variable.varType === "boolean")
+						else if (variable.varType === "bool")
 							defaultVal = false;
 						else if (variable.varType === "string")
 							defaultVal = "";
