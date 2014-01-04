@@ -1,7 +1,7 @@
 define(['./typechecker', './ast'],
 function(TypeChecker, AST) {
 	//Compiler settings
-	var ALLOW_VARIABLES_IN_BLOCK = true;
+	var ALLOW_VARIABLES_IN_BLOCK = false;
 	var ALLOW_VARIABLE_DECLARATION_IN_FOR_LOOP = false;
 
 	//Errors
