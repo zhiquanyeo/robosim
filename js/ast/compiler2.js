@@ -270,6 +270,11 @@ function(TypeChecker, AST) {
 						_pc = _pc + _getValue(instruction.offset);
 					}
 				} break;
+				case 'RJEQ': {
+					if (_zf) {
+						_pc = _pc + _getValue(instruction.offset);
+					}
+				} break;
 				case 'RJMP': {
 					_pc = _pc + _getValue(instruction.offset);
 				} break;
@@ -1049,6 +1054,40 @@ function(TypeChecker, AST) {
 
 		this.toString = function() {
 			return "RJNE " + _generateTargetString(this.offset);
+		}.bind(this);
+	}
+
+	//Relative jump if equal
+	function RJEQInstruction(k, executionUnit, comment) {
+		this.offset = k;
+
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'RJEQ';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "RJEQ " + _generateTargetString(this.offset);
 		}.bind(this);
 	}
 
@@ -1999,7 +2038,39 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileDoWhileLoop (statement, context) {
+		console.log('compiling do-while statement', statement);
 
+		var map = [];
+
+		var bodyMap = _compileBlock(statement.body, context);
+		map = map.concat(bodyMap);
+
+		//Do the check
+		var conditionMap = _compileExpression(statement.condition, context);
+		//pop into R0
+		conditionMap.push(new POPInstruction({
+			type: 'register',
+			value: 'R0'
+		}, statement.condition, "Pop result into R0"));
+
+		conditionMap.push(new CMPInstruction({
+			type: 'register',
+			value: 'R0'
+		}, {
+			type: 'raw',
+			value: true
+		}, statement.condition, "Compare condition with true"));
+
+		var rjmpVal = -(bodyMap.length + conditionMap.length + 1);
+
+		conditionMap.push(new RJEQInstruction({
+			type: 'raw',
+			value: rjmpVal
+		}, statement.condition, "Continue loop if condition met"));
+
+		map = map.concat(conditionMap);
+
+		return map;
 	}
 
 	function _compileFunctionCall (statement, context) {
@@ -2273,6 +2344,10 @@ function(TypeChecker, AST) {
 				else if (statement.nodeType === 'IfStatement') {
 					var ifMap = _compileIfStatement(statement, functionContext);
 					memmap = memmap.concat(ifMap);
+				}
+				else if (statement.nodeType === 'DoWhileStatement') {
+					var doWhileMap = _compileDoWhileLoop(statement, functionContext);
+					memmap = memmap.concat(doWhileMap);
 				}
 			}
 		}
