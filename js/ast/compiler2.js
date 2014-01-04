@@ -1904,7 +1904,7 @@ function(TypeChecker, AST) {
 				storageLocation.index = statement.left.property.value;
 			}
 			else if (statement.left.property.nodeType === "Identifier") {
-
+				throw new CompilerError("Member expression assignment to property has NOT BEEN IMPLEMENTED", statement.left.property.loc);
 			}
 			else {
 				if (statement.left.property.nodeType !== 'BinaryExpression')
@@ -2283,10 +2283,10 @@ function(TypeChecker, AST) {
 				map = map.concat(exprMap);
 			}
 			else if (argument.nodeType === "UnaryExpression") {
-
+				throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression as function argument", argument.loc);
 			}
 			else if (argument.nodeType === "MemberExpression") {
-
+				throw new CompilerError("[NOT IMPLEMENTED YET] MemberExpression as function argument", argument.loc);
 			}
 		}
 
@@ -2471,6 +2471,9 @@ function(TypeChecker, AST) {
 				else if (statement.nodeType === 'ForStatement') {
 					var forMap = _compileForLoop(statement, functionContext);
 					memmap = memmap.concat(forMap);
+				}
+				else if (statement.nodeType === 'UnaryExpression') {
+					throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression in function", statement.loc);
 				}
 			}
 		}
