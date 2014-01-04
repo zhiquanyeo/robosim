@@ -2300,11 +2300,7 @@ function(TypeChecker, AST) {
 	}
 
 	function _compileFunction (progStatement, context) {
-		//Register the function
-		if (context[progStatement.name] !== undefined) {
-			throw new CompilerError("'" + progStatement.name + "' is already defined", progStatement.loc);
-		}
-
+		
 		//base pointer offsets
 		var basePointerOffsets = {};
 		var bpOffset = -2; //ebp-1 is return address
@@ -2316,16 +2312,11 @@ function(TypeChecker, AST) {
 		var varmap = []; //use this to store the variables first. These are the first instructions to get run
 		var memmap = [];
 
-		var paramList = [];
 		//Get the params list in the form {varType, name}
 		for (var i = 0, len = progStatement.parameters.length; i < len; i++) {
 			var param = progStatement.parameters[i];
 			var paramDeclarators = _getVariables(param);
-			paramList.push({
-				varType: paramDeclarators[0].varType,
-				name: paramDeclarators[0].name
-			});
-
+			
 			//push this into function context and ebpoffsets as well
 			functionContext[paramDeclarators[0].name] = {
 				type: "variable",
@@ -2339,13 +2330,6 @@ function(TypeChecker, AST) {
 
 		//reset bpOffset to prepare for local variables
 		bpOffset = 1;
-
-		//Actually register with the context
-		context[progStatement.name] = {
-			type: 'function',
-			retType: progStatement.type,
-			parameters: paramList
-		};
 
 		var hasReturn = false;
 
@@ -2638,6 +2622,35 @@ function(TypeChecker, AST) {
 
 		_memmap = _memmap.concat(_installBuiltIns(_functions, _context));
 		_mapOffset = _memmap.length;
+
+		//Hoist function declarations to the top
+		for (var i = 0, len = programAST.statements.length; i < len; i++) {
+			var statement = programAST.statements[i];
+
+			if (statement.nodeType === "FunctionDeclaration") {
+				var paramList = [];
+
+				if (_context[statement.name] !== undefined) {
+					throw new CompilerError("'" + statement.name + "' is already defined", statement.loc);
+				}
+
+				for (var pi = 0, plen = statement.parameters.length; pi < plen; pi++) {
+					var param = statement.parameters[pi];
+					var paramDeclarators = _getVariables(param);
+
+					paramList.push({
+						varType: paramDeclarators[0].varType,
+						name: paramDeclarators[0].name
+					});
+				}
+
+				_context[statement.name] = {
+					type: 'function',
+					retType: statement.type,
+					parameters: paramList
+				};
+			}
+		}
 
 		//Load all the global variables and functions
 		for (var i = 0, len = programAST.statements.length; i < len; i++) {
