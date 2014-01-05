@@ -163,7 +163,9 @@ function(Compiler) {
 		}
 
 		this.reset = function() {
-
+			if (_program) {
+				_program.reset();
+			}
 		};
 
 		this.addEventHandler = function (event, callback) {

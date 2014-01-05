@@ -17,9 +17,8 @@ function($, _, Robot, Field, RangeFinder,
             
             var robot = new Robot({width:10,height:10});
             
-            robot.setPositionXY(50, 50);
-            robot.rotationalSpeed = 12;
-
+            _resetRobot();
+            
             //Set up the robot
             var frontRangeFinder = new RangeFinder();
             robot.addSensor(frontRangeFinder, robot.SensorMountPoint.FRONT);
@@ -83,11 +82,11 @@ function($, _, Robot, Field, RangeFinder,
             theField.addItem(robot, theField.FieldItemType.ROBOT);
 
             //Hook up the button listeners
-            var speedEntry = document.getElementById('txtSpeed');
-            var setSpeedBtn = document.getElementById('btnSetSpeed');
-            var forwardBtn = document.getElementById('btnForward');
             var startStopBtn = document.getElementById('btnStartStop');
-            var abortButton = document.getElementById('btnAbort');
+            var compileBtn = document.getElementById('btnCompile');
+            var resetButton = document.getElementById('btnReset');
+
+            startStopBtn.disabled = true;
 
             //Simulation Setup
             var simulation = new Simulation(theField, robot);
@@ -120,61 +119,37 @@ function($, _, Robot, Field, RangeFinder,
                 }
             });
 
-            setSpeedBtn.addEventListener('click', function() {
-                var newSpeed = parseFloat(speedEntry.value);
-                if (!isNaN(newSpeed)) {
-                    robot.speed = newSpeed;
-                }
-                else {
-                    robot.speed = 0;
-                    speedEntry.value = 0;
-                }
-            });
+            
 
-            var robotProgram;
-
-            function builtInPrint(str) {
-                console.log("[PROGRAM OUTPUT] " + str);
-            }
-
-            var builtIns = [
-                {
-                    name: 'print',
-                    retType: 'void',
-                    parameters: [{
-                        varType: 'string',
-                        name: 'str'
-                    }],
-                    implementation: builtInPrint
-                }
-            ]
-
-            forwardBtn.addEventListener('click', function() {
+            compileBtn.addEventListener('click', function() {
                 try {
+                    _resetRobot();
                     var result = Parser.parse(editor.getSession().getValue());
                     
-                    // robotProgram = new RobotProgram(result);
-                    // robotProgram.execute({});
-
-                    //Compiler.compile(result);
-                    // Compiler2.compile(result);
-
                     simulation.loadProgramAST(result);
+                    startStopBtn.disabled = false;
                 }
                 catch (e) {
                     if (e instanceof ReferenceError || e instanceof TypeError) {
                         throw e;
                     }
                     console.warn(e);
+                    startStopBtn.disabled = true;
                 }
             });
 
-            abortButton.addEventListener('click', function () {
-                if (robotProgram) {
-                    console.log('!!!!!! ABORTING PROGRAM !!!!!!!!');
-                    robotProgram.abort();
+            resetButton.addEventListener('click', function () {
+                _resetRobot();
+                if (simulation) {
+                    simulation.reset();
                 }
             });
+
+            function _resetRobot() {
+                robot.setPositionXY(50, 50);
+                robot.speed = 0;
+                robot.rotationalSpeed = 0;
+            }
         }
     };
 });
