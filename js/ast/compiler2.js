@@ -47,6 +47,10 @@ function(TypeChecker, AST) {
 
 		this.reset = function() {
 			_pc = mainOffset;
+			stack = [-1, null];
+			_sp = 2;
+			_bp = 1;
+			_zf = false;
 		}
 
 		this.getPC = function () {
