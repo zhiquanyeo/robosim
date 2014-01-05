@@ -50,6 +50,15 @@ function(Compiler) {
 			_robot.rotationalSpeed = rotSpeed;
 		}
 
+		function _getTimeImpl() {
+			return (new Date()).getTime();
+		}
+
+		function _getFrontDistance() {
+			var sensor = _robot.getSensor(0);
+			return sensor.getValue();
+		}
+
 
 		var builtInFunctions = [
 			{
@@ -60,6 +69,12 @@ function(Compiler) {
 					name: 'str'
 				}],
 				implementation: _printImplementation
+			},
+			{
+				name: 'getTime',
+				retType: 'int',
+				parameters: [],
+				implementation: _getTimeImpl
 			},
 			{
 				name: 'Robot~setSpeed',
@@ -79,6 +94,12 @@ function(Compiler) {
 				}],
 				implementation: _robotSetRotationImpl
 			},
+			{
+				name: 'Robot~getFrontDistance',
+				retType: 'double',
+				parameters: [],
+				implementation: _getFrontDistance
+			}
 		];
 
 		//==== Startup routines ====
@@ -126,7 +147,7 @@ function(Compiler) {
 
 			if (!_isRunning) {
 				_lastTime = (new Date()).getTime();
-				_timerToken = setInterval(_doTimerTick, 100);
+				_timerToken = setInterval(_doTimerTick, 10);
 				_isRunning = true;
 				_fireEvent('runStateChanged', true);
 			}

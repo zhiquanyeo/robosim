@@ -302,7 +302,13 @@ function () {
 
 			_sensors.push(sensor);
 
+			return _sensors.length - 1;
+
 		}.bind(this);
+
+		this.getSensor = function (index) {
+			return _sensors[index];
+		};
 		
 		//Field related functionality
 		this.registerWithField = function (field) {
