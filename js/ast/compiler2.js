@@ -1860,6 +1860,15 @@ function(TypeChecker, AST) {
 			}
 
 		}
+		else if (statement.nodeType === 'CallExpression') {
+			var callMap = _compileFunctionCall(statement, context);
+			//result is in RAX
+			map = map.concat(callMap);
+			map.push(new PUSHInstruction({
+				type: 'register',
+				value: 'RAX'
+			}, statement, "Push result of function call onto stack"));
+		}
 		else if (statement.nodeType === "UpdateExpression") {
 			var exprMap = _compileExpression(statement.expression, context);
 			map = map.concat(exprMap);
@@ -2470,6 +2479,10 @@ function(TypeChecker, AST) {
 			else if (argument.nodeType === "UnaryExpression") {
 				var exprMap = _compileExpression(argument, context);
 				map = map.concat(exprMap);
+			}
+			else if (argument.nodeType === "CallExpression") {
+				var callMap = _compileExpression(argument, context);
+				map = map.concat(callMap);
 			}
 			else if (argument.nodeType === "MemberExpression") {
 				throw new CompilerError("[NOT IMPLEMENTED YET] MemberExpression as function argument", argument.loc);
