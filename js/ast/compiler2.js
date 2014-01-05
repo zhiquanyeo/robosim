@@ -317,6 +317,18 @@ function(TypeChecker, AST) {
 						value: _getValue(instruction.destination) * -1
 					});
 				} break;
+				case 'INC': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) + 1
+					});
+				} break;
+				case 'DEC': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) - 1
+					});
+				} break;
 
 				//Experimental
 				case 'EXT': {
@@ -623,7 +635,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "SUB " + this.destination;
+			return "INC " + _generateTargetString(this.destination);
 		}.bind(this);
 	}
 
@@ -655,7 +667,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "DEC " + this.destination;
+			return "DEC " + _generateTargetString(this.destination);
 		}.bind(this);
 	}
 
@@ -1666,6 +1678,21 @@ function(TypeChecker, AST) {
 					// }, statement, "Jump to beginning of loop"));
 				}
 			}
+			else if (statement.nodeType === 'UnaryExpression') {
+				throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression in function", statement.loc);
+			}
+			else if (statement.nodeType === 'UpdateExpression') {
+				var updateMap = _compileExpression(statement, blockContext);
+				map = map.concat(updateMap);
+				if (statement.expression.nodeType === 'Identifier') {
+					map.push(new POPInstruction({
+						type: 'pendingVariable',
+						value: {
+							name: statement.expression.label
+						}
+					}, statement.expression, "Pop variable back into variable space"));
+				}
+			}
 		}
 
 		//handle initializers
@@ -1710,7 +1737,9 @@ function(TypeChecker, AST) {
 				else {
 					sourceValue = {
 						type: 'pendingVariable', 
-						value: pInit.name
+						value: {
+							name: pInit.name
+						}
 					}
 				}
 
@@ -1803,7 +1832,7 @@ function(TypeChecker, AST) {
 			}, statement, "Push variable value onto stack while processing expression"));
 		}
 		else if (statement.nodeType === 'UnaryExpression') {
-			var exprMap = _compileExpression(statement.expression);
+			var exprMap = _compileExpression(statement.expression, context);
 			map = map.concat(exprMap);
 			//if the operator is '+', we don't need to do anything else
 			if (statement.operator === '-') {
@@ -1830,6 +1859,36 @@ function(TypeChecker, AST) {
 				throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression operators other than +/-", statement.operator.loc);
 			}
 
+		}
+		else if (statement.nodeType === "UpdateExpression") {
+			var exprMap = _compileExpression(statement.expression, context);
+			map = map.concat(exprMap);
+			//pop the result into R0 first
+			map.push(new POPInstruction({
+				type: 'register',
+				value: 'R0'
+			}, statement.expression, "Pop expression value into R0"));
+
+			if (statement.operator === '--') {
+				map.push(new DECInstruction({
+					type: 'register',
+					value: 'R0'
+				}, statement.expression, "Decrement R0"));
+			}
+			else if (statement.operator === '++') {
+				map.push(new INCInstruction({
+					type: 'register',
+					value: 'R0'
+				}, statement.expression, "Increment R0"));
+			}
+			else {
+				throw new CompilerError("Only ++/-- are supported for update expressions", statement.operator.loc);
+			}
+
+			map.push(new PUSHInstruction({
+				type: 'register',
+				value: 'R0'
+			}, statement.expression, "Push new value back onto stack"));
 		}
 		else if (statement.nodeType === 'BinaryExpression') {
 			//compile the left side
@@ -2601,6 +2660,18 @@ function(TypeChecker, AST) {
 				}
 				else if (statement.nodeType === 'UnaryExpression') {
 					throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression in function", statement.loc);
+				}
+				else if (statement.nodeType === 'UpdateExpression') {
+					var updateMap = _compileExpression(statement, functionContext);
+					memmap = memmap.concat(updateMap);
+					if (statement.expression.nodeType === 'Identifier') {
+						memmap.push(new POPInstruction({
+							type: 'pendingVariable',
+							value: {
+								name: statement.expression.label
+							}
+						}, statement.expression, "Pop variable back into variable space"));
+					}
 				}
 			}
 		}
