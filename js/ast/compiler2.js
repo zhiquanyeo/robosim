@@ -326,8 +326,12 @@ function(TypeChecker, AST) {
 						}));
 					}
 					if (VERBOSE) console.log('passing parameters: ', data);
-					if (_externalFunctions[instruction.command])
-						_externalFunctions[instruction.command].apply(null, data);
+					if (_externalFunctions[instruction.command]) {
+						var retValue = _externalFunctions[instruction.command].apply(null, data);
+						if (retValue !== undefined) {
+							registers['RAX'] = retValue;
+						}
+					}
 				} break;
 
 				case 'RET': {
@@ -1601,6 +1605,18 @@ function(TypeChecker, AST) {
 			else if (statement.nodeType === "IfStatement") {
 				var ifMap = _compileIfStatement(statement, blockContext);
 				map = map.concat(ifMap);
+			}
+			else if (statement.nodeType === "DoWhileStatement") {
+				var doWhileMap = _compileDoWhileLoop(statement, blockContext);
+				map = map.concat(doWhileMap);
+			}
+			else if (statement.nodeType === "WhileStatement") {
+				var whileMap = _compileWhileLoop(statement, blockContext);
+				map = map.concat(whileMap);
+			}
+			else if (statement.nodeType === "ForStatement") {
+				var forMap = _compileForLoop(statement, blockContext);
+				map = map.concat(forMap);
 			}
 		}
 
