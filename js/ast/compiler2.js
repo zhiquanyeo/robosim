@@ -311,6 +311,12 @@ function(TypeChecker, AST) {
 				case 'RJMP': {
 					_pc = _pc + _getValue(instruction.offset);
 				} break;
+				case 'NEG': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) * -1
+					});
+				} break;
 
 				//Experimental
 				case 'EXT': {
@@ -650,6 +656,38 @@ function(TypeChecker, AST) {
 
 		this.toString = function() {
 			return "DEC " + this.destination;
+		}.bind(this);
+	}
+
+	function NEGInstruction(dest, executionUnit, comment) {
+		this.destination = dest;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'NEG';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "NEG " + _generateTargetString(this.destination);
 		}.bind(this);
 	}
 
@@ -1764,6 +1802,35 @@ function(TypeChecker, AST) {
 				}
 			}, statement, "Push variable value onto stack while processing expression"));
 		}
+		else if (statement.nodeType === 'UnaryExpression') {
+			var exprMap = _compileExpression(statement.expression);
+			map = map.concat(exprMap);
+			//if the operator is '+', we don't need to do anything else
+			if (statement.operator === '-') {
+				//pop the result off the stack and into R0
+				map.push(new POPInstruction({
+					type: 'register',
+					value: 'R0',
+				}, statement.expression, "Pop expression value into R0"));
+
+				//negate
+				map.push(new NEGInstruction({
+					type: 'register',
+					value: 'R0'
+				}, statement.operator, "Negate value in R0"));
+
+				map.push(new PUSHInstruction({
+					type: 'register',
+					value: 'R0'
+				}, statement.expression, "Push new value back onto stack"));
+			}
+			else if (statement.operator !== '+') {
+				//anything else, we throw an error
+				//for now...
+				throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression operators other than +/-", statement.operator.loc);
+			}
+
+		}
 		else if (statement.nodeType === 'BinaryExpression') {
 			//compile the left side
 			var leftMap = _compileExpression(statement.left, context);
@@ -1981,6 +2048,22 @@ function(TypeChecker, AST) {
 			}, statement.right, "Store variable '" + newRight.label + "' in variable '" + storageLocation.name + "'"));
 		}
 		else if (newRight.nodeType === "BinaryExpression") {
+			var expressionMap = _compileExpression(newRight, context);
+			map = map.concat(expressionMap);
+			//need to pop the expression
+			map.push(new POPInstruction({
+				type: 'register',
+				value: 'R0'
+			}, statement.right, "Put result of expression in R0"));
+			map.push(new MOVInstruction({
+				type: 'pendingVariable',
+				value: storageLocation,
+			}, {
+				type: 'register',
+				value: 'R0'
+			}, statement.right, "Store result of expression in variable '" + storageLocation.name + "'"));
+		}
+		else if (newRight.nodeType === "UnaryExpression") {
 			var expressionMap = _compileExpression(newRight, context);
 			map = map.concat(expressionMap);
 			//need to pop the expression
@@ -2326,7 +2409,8 @@ function(TypeChecker, AST) {
 				map = map.concat(exprMap);
 			}
 			else if (argument.nodeType === "UnaryExpression") {
-				throw new CompilerError("[NOT IMPLEMENTED YET] UnaryExpression as function argument", argument.loc);
+				var exprMap = _compileExpression(argument, context);
+				map = map.concat(exprMap);
 			}
 			else if (argument.nodeType === "MemberExpression") {
 				throw new CompilerError("[NOT IMPLEMENTED YET] MemberExpression as function argument", argument.loc);
