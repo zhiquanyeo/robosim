@@ -1621,10 +1621,11 @@ function(TypeChecker, AST) {
 			}
 			else if (statement.nodeType === "ContinueStatement") {
 				if (isLoop) {
-					map.push(new RJMPInstruction({
-						type: 'pendingRelativeJump',
-						value: 'start'
-					}, statement, "Jump to beginning of loop"));
+					throw new CompilerError("[NOT IMPLEMENTED YET] continue statement", statement.loc);
+					// map.push(new RJMPInstruction({
+					// 	type: 'pendingRelativeJump',
+					// 	value: 'start'
+					// }, statement, "Jump to beginning of loop"));
 				}
 			}
 		}
@@ -1737,18 +1738,6 @@ function(TypeChecker, AST) {
 					}
 				}
 			}
-			// if (stmt.offset) {
-			// 	if (stmt.offset.type === 'pendingRelativeJump') {
-			// 		if (stmt.offset.value === 'start') {
-			// 			stmt.offset.type = 'raw';
-			// 			stmt.offset.value = -i;
-			// 		}
-			// 		else if (stmt.offset.value === 'end') {
-			// 			stmt.offset.type = 'raw';
-			// 			stmt.offset.value = len - i;
-			// 		}
-			// 	}
-			// }
 		}
 
 		return map;
