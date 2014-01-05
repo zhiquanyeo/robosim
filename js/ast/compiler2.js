@@ -654,14 +654,7 @@ function(TypeChecker, AST) {
 	}
 
 	function RJMPInstruction(k, executionUnit, comment) {
-		var _offset = k;
-
-		Object.defineProperty(this, 'offset', {
-			get: function() {
-				return _offset;
-			},
-			enumerable: true
-		});
+		this.offset = k;
 
 		Object.defineProperty(this, 'type', {
 			get: function() {
@@ -1522,7 +1515,7 @@ function(TypeChecker, AST) {
 		}
 	}
 
-	function _compileBlock (blockStatement, context) {
+	function _compileBlock (blockStatement, context, isLoop) {
 		//essentially a copy of function
 		//TODO: Right now we cannot specify variables in block statement
 		var map = [];
@@ -1603,7 +1596,7 @@ function(TypeChecker, AST) {
 				map = map.concat(callMap);
 			}
 			else if (statement.nodeType === "IfStatement") {
-				var ifMap = _compileIfStatement(statement, blockContext);
+				var ifMap = _compileIfStatement(statement, blockContext, true);
 				map = map.concat(ifMap);
 			}
 			else if (statement.nodeType === "DoWhileStatement") {
@@ -1617,6 +1610,22 @@ function(TypeChecker, AST) {
 			else if (statement.nodeType === "ForStatement") {
 				var forMap = _compileForLoop(statement, blockContext);
 				map = map.concat(forMap);
+			}
+			else if (statement.nodeType === "BreakStatement") {
+				if (isLoop) {
+					map.push(new RJMPInstruction({
+						type: 'pendingRelativeJump',
+						value: 'end'
+					}, statement, "Jump to end of loop"));
+				}
+			}
+			else if (statement.nodeType === "ContinueStatement") {
+				if (isLoop) {
+					map.push(new RJMPInstruction({
+						type: 'pendingRelativeJump',
+						value: 'start'
+					}, statement, "Jump to beginning of loop"));
+				}
 			}
 		}
 
@@ -1728,6 +1737,18 @@ function(TypeChecker, AST) {
 					}
 				}
 			}
+			// if (stmt.offset) {
+			// 	if (stmt.offset.type === 'pendingRelativeJump') {
+			// 		if (stmt.offset.value === 'start') {
+			// 			stmt.offset.type = 'raw';
+			// 			stmt.offset.value = -i;
+			// 		}
+			// 		else if (stmt.offset.value === 'end') {
+			// 			stmt.offset.type = 'raw';
+			// 			stmt.offset.value = len - i;
+			// 		}
+			// 	}
+			// }
 		}
 
 		return map;
@@ -2004,7 +2025,7 @@ function(TypeChecker, AST) {
 		return map;
 	}
 
-	function _compileIfStatement (statement, context) {
+	function _compileIfStatement (statement, context, isInLoop) {
 		if (VERBOSE) console.log('compiling if statement', statement);
 		var map = [];
 
@@ -2041,10 +2062,10 @@ function(TypeChecker, AST) {
 			//compile the else statement (if present)
 			if (statement.elseStatement) {
 				if (statement.elseStatement.nodeType === "BlockStatement") {
-					elseMap = _compileBlock(statement.elseStatement, context);
+					elseMap = _compileBlock(statement.elseStatement, context, isInLoop);
 				}
 				else if (statement.elseStatement.nodeType === "IfStatement") {
-					elseMap = _compileIfStatement(statement.elseStatement, context)
+					elseMap = _compileIfStatement(statement.elseStatement, context, isInLoop)
 				}
 				else {
 					throw new CompilerError("Expected a BlockStatement or IfStatement", statement.elseStatement.loc);
@@ -2055,7 +2076,7 @@ function(TypeChecker, AST) {
 			}
 
 			if (statement.trueStatement.nodeType === "BlockStatement") {
-				trueMap = _compileBlock(statement.trueStatement, context);
+				trueMap = _compileBlock(statement.trueStatement, context, isInLoop);
 				trueMap.push(new RJMPInstruction({
 					type: 'raw',
 					value: elseMap.length
@@ -2076,10 +2097,10 @@ function(TypeChecker, AST) {
 			}
 		}
 		else if (statement.condition.nodeType === "Literal") {
-
+			throw new CompilerError("[NOT YET IMPLEMENTED] literal condition in if statement", statement.condition.loc);
 		}
 		else if (statement.condition.nodeType === "Identifier") {
-
+			throw new CompilerError("[NOT YET IMPLEMENTED] identifier condition in if statement", statement.condition.loc);
 		}
 
 		return map;
@@ -2189,7 +2210,7 @@ function(TypeChecker, AST) {
 
 		var map = [];
 
-		var bodyMap = _compileBlock(statement.body, context);
+		var bodyMap = _compileBlock(statement.body, context, true);
 		map = map.concat(bodyMap);
 
 		//Do the check
@@ -2216,6 +2237,23 @@ function(TypeChecker, AST) {
 		}, statement.condition, "Continue loop if condition met"));
 
 		map = map.concat(conditionMap);
+
+		//find any break/continue statements
+		for (var i = 0, len = map.length; i < len; i++) {
+			var stmt = map[i];
+			if (stmt.offset) {
+				if (stmt.offset.type === 'pendingRelativeJump') {
+					if (stmt.offset.value === 'start') {
+						stmt.offset.type = 'raw';
+						stmt.offset.value = -i;
+					}
+					else if (stmt.offset.value === 'end') {
+						stmt.offset.type = 'raw';
+						stmt.offset.value = len - i - 1; //number of remaining slots
+					}
+				}
+			}
+		}
 
 		return map;
 	}
