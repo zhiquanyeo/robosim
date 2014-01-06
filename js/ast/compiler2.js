@@ -2935,7 +2935,7 @@ function(TypeChecker, AST) {
 		_printAssembly(_memmap);
 
 		if (_functions["main"] === undefined) {
-			throw new CompilerError("Expecting a main function but found none", {line: 0, column: 0});
+			throw new CompilerError("Expecting a main function but found none", {line: 1, column: 0});
 		}
 
 		var program = new Program(_memmap, _functions["main"]);

@@ -26,5 +26,52 @@
 }
 
 #editorPane {
-	
+	display: -webkit-flex;
+	-webkit-flex-flow: row;
+}
+
+#editorArea {
+	-webkit-flex: 1 1 auto;
+}
+
+#verticalSplitter {
+	width: 4px;
+	background: #efefef;
+	cursor: ew-resize;
+}
+
+#outputArea {
+	user-select: none;
+	-webkit-user-select: none;
+	display: -webkit-flex;
+	-webkit-flex-flow: column;
+	min-width: 150px;
+}
+
+#outputHeader {
+	display: -webkit-flex;
+	-webkit-flex-flow: row;
+	min-height: 25px;
+}
+
+#outputTitle {
+	-webkit-flex: 1 1 auto;
+	font-weight: bold;
+	padding-left: 5px;
+	line-height: 25px;
+}
+
+#outputList {
+	font-family: monospace;
+	white-space: pre;
+	overflow-y: scroll;
+	min-height: auto;
+	-webkit-flex: 1 1 auto;
+}
+
+.error {
+	background: rgba(255, 0, 0, 0.1);
+	position: absolute;
+	width: 100%;
+	left: 0;
 }
