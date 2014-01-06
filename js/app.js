@@ -1,8 +1,8 @@
 define(['jquery', 'underscore',
     'robot', 'field', 'sensors/rangefinder',
-    'simulation', 'ast/parser'],
+    'simulation', 'ast/parser', 'samples'],
 function($, _, Robot, Field, RangeFinder,
-    Simulation, Parser) {
+    Simulation, Parser, Samples) {
 
     var mouseDown = false;
     var vMouseDown = false;
@@ -46,6 +46,24 @@ function($, _, Robot, Field, RangeFinder,
             //editor.setTheme("ace/theme/monokai");
             editor.getSession().setMode("ace/mode/c_cpp");
 
+            //Load any samples
+            var sampleList = document.getElementById('cboSamples');
+            var samples = Samples.sampleList;
+            for (var i = 0, len = samples.length; i < len; i++) {
+                var sample = samples[i];
+                var opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = sample.title;
+                sampleList.appendChild(opt);
+            }
+
+            var loadSampleBtn = document.getElementById('btnLoadSample');
+            loadSampleBtn.addEventListener('click', function() {
+                var idx = sampleList.selectedIndex;
+                if (idx !== -1) {
+                    editor.getSession().setValue(samples[idx].code);
+                }
+            });
 
             //UI
             var splitter = document.getElementById('horizontalSplitter');
@@ -215,6 +233,7 @@ function($, _, Robot, Field, RangeFinder,
                 robot.setPositionXY(50, 50);
                 robot.speed = 0;
                 robot.rotationalSpeed = 0;
+                robot.bearing = 0;
             }
         }
     };

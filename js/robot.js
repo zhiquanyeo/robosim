@@ -247,6 +247,23 @@ function () {
 		Object.defineProperty(this, 'bearing', {
 			get: function() {
 				return _bearing;
+			},
+			set: function(brg) {
+				_bearing = brg;
+				if (_playingField) {
+					var pxTopOffset = _playingField.logicalToPixelOffset(this.position.y);
+					var pxLeftOffset = _playingField.logicalToPixelOffset(this.position.x);
+					var pxWidth = _playingField.logicalToPixelOffset(this.size.width);
+					var pxHeight = _playingField.logicalToPixelOffset(this.size.height);
+
+					_redraw(_domElem, {
+						x: pxLeftOffset,
+						y: pxTopOffset,
+						width: pxWidth,
+						height: pxHeight,
+						bearing: _bearing
+					});
+				}
 			}
 		});
 
