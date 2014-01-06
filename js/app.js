@@ -114,6 +114,10 @@ function($, _, Robot, Field, RangeFinder,
 
             var outputList = document.getElementById('outputList');
 
+            function printOutput(type, message) {
+                outputList.innerHTML += "[" + type + "] " + message + "\n";
+            }
+
             //Simulation Setup
             var simulation = new Simulation(theField, robot);
 
@@ -126,13 +130,19 @@ function($, _, Robot, Field, RangeFinder,
                 }
             });
 
+            simulation.addEventHandler('simulationComplete', function(e) {
+                printOutput('SYS', "Simulation Complete: " + e.message);
+                //disable the button
+                startStopBtn.disabled = true;
+            });
+
             simulation.addEventHandler('simulationError', function(e) {
                 console.warn(e.message);
             });
 
             simulation.addEventHandler('simulationOutput', function(output) {
                 if (output.type === 'output') {
-                    outputList.innerHTML += "[SIM] " + output.message + "\n";
+                    printOutput("SIM", output.message);
                 }
             });
 
@@ -197,6 +207,7 @@ function($, _, Robot, Field, RangeFinder,
                 _resetRobot();
                 if (simulation) {
                     simulation.reset();
+                    startStopBtn.disabled = false;
                 }
             });
 

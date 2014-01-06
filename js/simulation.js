@@ -116,7 +116,7 @@ function(Compiler) {
 				_program.executeNextBlock();
 			}
 			else {
-				_fireEvent('simulationError', {
+				_fireEvent('simulationComplete', {
 					message: 'Program has terminated'
 				});
 				_stopSimulation();
