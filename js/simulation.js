@@ -5,7 +5,7 @@ and a robot. This will be the interface by which the outside world starts
 and stops the robot.
 
 */
-define(['ast/compiler2'],
+define(['ast/compiler'],
 function(Compiler) {
 
 	function Simulation(field, robot, programAST) {

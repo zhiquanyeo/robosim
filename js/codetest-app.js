@@ -1,4 +1,4 @@
-define(['ast/ast', 'ast/parser', 'ast/compiler2'],
+define(['ast/ast', 'ast/parser', 'ast/compiler'],
 function(AST, Parser, Compiler) {
 
 	return {
