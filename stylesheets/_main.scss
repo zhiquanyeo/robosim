@@ -19,6 +19,16 @@
 	-webkit-user-select: none;
 }
 
+#loader {
+	display: inline-block;
+	width: 50px;
+	height: 12px;
+}
+#loader.loading {
+	background: url(../img/loading.gif) no-repeat;
+	background-size: contain;
+}
+
 #horizontalSplitter {
 	height: 4px;
 	background: #efefef;

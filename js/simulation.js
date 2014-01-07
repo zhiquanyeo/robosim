@@ -5,8 +5,8 @@ and a robot. This will be the interface by which the outside world starts
 and stops the robot.
 
 */
-define(['ast/compiler'],
-function(Compiler) {
+define(['ast/compiler', 'linklibs/core', 'linklibs/math'],
+function(Compiler, CoreLib, MathLib) {
 
 	function Simulation(field, robot, programAST) {
 
@@ -71,12 +71,6 @@ function(Compiler) {
 				implementation: _printImplementation
 			},
 			{
-				name: 'getTime',
-				retType: 'int',
-				parameters: [],
-				implementation: _getTimeImpl
-			},
-			{
 				name: 'Robot~setSpeed',
 				retType: 'void',
 				parameters: [{
@@ -101,6 +95,10 @@ function(Compiler) {
 				implementation: _getFrontDistance
 			}
 		];
+
+		//Link in libraries
+		builtInFunctions = builtInFunctions.concat(CoreLib);
+		builtInFunctions = builtInFunctions.concat(MathLib);
 
 		//==== Startup routines ====
 		// set up the event handler for the robot

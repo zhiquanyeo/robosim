@@ -1,5 +1,5 @@
-define(['ast/ast', 'ast/parser', 'ast/compiler'],
-function(AST, Parser, Compiler) {
+define(['ast/ast', 'ast/parser', 'ast/compiler', 'linklibs/core', 'linklibs/math'],
+function(AST, Parser, Compiler, CoreLib, MathLib) {
 
 	return {
 		start: function() {
@@ -151,6 +151,9 @@ function(AST, Parser, Compiler) {
 					implementation: printToScreen
 				}
 			];
+
+			builtIns = builtIns.concat(CoreLib);
+			builtIns = builtIns.concat(MathLib);
 
 			compileButton.addEventListener('click', function() {
 				editor.getSession().clearAnnotations();

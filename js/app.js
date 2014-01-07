@@ -177,48 +177,56 @@ function($, _, Robot, Field, RangeFinder,
                 outputList.innerHTML = "";
             })
             
-
+            var loaderArea = document.getElementById('loader');
             compileBtn.addEventListener('click', function() {
                 editor.getSession().clearAnnotations();
+                loaderArea.classList.add('loading');
+                printOutput("SYS", "Beginning Compilation...");
+
                 if (errorLine !== null) {
                     editor.getSession().removeMarker(errorLine);
                     errorLine = null;
                 }
+                window.setTimeout(function() {
+                    try {
+                        _resetRobot();
+                        var result = Parser.parse(editor.getSession().getValue());
+                        
+                        simulation.loadProgramAST(result);
+                        startStopBtn.disabled = false;
+                        loaderArea.classList.remove('loading');
+                        printOutput("SYS", "Compilation Complete");
+                    }
+                    catch (e) {
+                        if (e instanceof ReferenceError || e instanceof TypeError) {
+                            throw e;
+                        }
+                        startStopBtn.disabled = true;
 
-                try {
-                    _resetRobot();
-                    var result = Parser.parse(editor.getSession().getValue());
-                    
-                    simulation.loadProgramAST(result);
-                    startStopBtn.disabled = false;
-                }
-                catch (e) {
-                    if (e instanceof ReferenceError || e instanceof TypeError) {
-                        throw e;
-                    }
-                    startStopBtn.disabled = true;
+                        //Do error highlighting
+                        var line, col;
+                        if (e.line && e.column) {
+                            line = e.line;
+                            col = e.column;
+                        }
+                        else if (e.loc) {
+                            line = e.loc.line;
+                            col = e.loc.column;
+                        }
+                        if (line !== undefined && col !== undefined) {
+                            editor.getSession().setAnnotations([{
+                                row: line - 1,
+                                column: col,
+                                text: e.message,
+                                type: 'error'
+                            }]);
 
-                    //Do error highlighting
-                    var line, col;
-                    if (e.line && e.column) {
-                        line = e.line;
-                        col = e.column;
+                            errorLine = editor.getSession().addMarker(new EditorRange(line - 1, 0, line, 0), "error", "line");
+                        }
+                        loaderArea.classList.remove('loading');
+                        printOutput("SYS", e.message);
                     }
-                    else if (e.loc) {
-                        line = e.loc.line;
-                        col = e.loc.column;
-                    }
-                    if (line !== undefined && col !== undefined) {
-                        editor.getSession().setAnnotations([{
-                            row: line - 1,
-                            column: col,
-                            text: e.message,
-                            type: 'error'
-                        }]);
-
-                        errorLine = editor.getSession().addMarker(new EditorRange(line - 1, 0, line, 0), "error", "line");
-                    }
-                }
+                }, 0);
             });
 
             resetButton.addEventListener('click', function () {
