@@ -7,7 +7,8 @@ require.config({
 		//define vendor paths
 		'jquery': 'libs/jquery',
 		'underscore': 'libs/underscore',
-		'backbone': 'libs/backbone'
+		'backbone': 'libs/backbone',
+		'jqxwidgets': 'libs/jqwidgets/jqx-all',
 	},
 	'shim': {
 		'underscore': {
@@ -16,7 +17,8 @@ require.config({
 		'backbone': {
 			'deps': ['jquery', 'underscore'],
 			'exports': 'Backbone'
-		}
+		},
+		'jqxwidgets': ['jquery'],
 	}
 });
 

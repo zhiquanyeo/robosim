@@ -2,43 +2,47 @@
 <head>
 	<title>FIRST RoboSimulator</title>
 	<link rel="stylesheet" type="text/css" href="css/robosim.css" />
+	<link rel="stylesheet" type="text/css" href="js/libs/jqwidgets/styles/jqx.base.css"/>
 	<script src="js/libs/ace/ace.js" type="text/javascript" charset="utf-8"></script>
 	<script data-main="js/main" src="js/libs/require.js"></script>
 </head>
 <body>
-	<div id="mainLayout">
-		<div id="playingField"></div>
-		<div id="horizontalSplitter"></div>
-		<div id="controlArea">
-			<button id="btnCompile">Compile</button>
-			<div id="loader"></div>
-			<button id="btnStartStop">Start</button>
-			<span style="width: 150px">&nbsp;</span>
-			<button id="btnReset">Reset Simulation</button>
-			<span style="width: 200px">&nbsp;</span>
-			<label>Load Sample
-				<select id="cboSamples"></select>
-			</label>
-			<button id="btnLoadSample">Load</button>
-			<span style="width: 100px">&nbsp;</span>
-			<label>Show Robot Bounding Box
-				<input type="checkbox" id="chkBoundingBox"/>
-			</label>
-		</div>
-		<div id="editorPane" style="height:300px">
+	<div id="mainSplitter">
+		<div id="codeArea">
+			<div id="controlArea">
+				<button id="btnCompile">Compile</button>
+				<div id="loader"></div>
+				<button id="btnStartStop">Start</button>
+				<span style="width: 150px">&nbsp;</span>
+				<button id="btnReset">Reset Simulation</button>
+				<span style="width: 200px">&nbsp;</span>
+				<label>Load Sample
+					<select id="cboSamples"></select>
+				</label>
+				<button id="btnLoadSample">Load</button>
+				<span style="width: 100px">&nbsp;</span>
+				<label>Show Robot Bounding Box
+					<input type="checkbox" id="chkBoundingBox"/>
+				</label>
+			</div>
 			<div id="editorArea"></div>
-			<div id="verticalSplitter"></div>
-			<div id="outputArea" style="width:250px">
-				<div id="outputHeader">
-					<div id="outputTitle">Output</div>
-					<button id="btnClearOutput">Clear Output</button>
+		</div>
+		<div>
+			<div id="outputSplitter">
+				<div id="playingField"></div>
+				<div id="outputArea">
+					<div id="outputHeader">
+						<div id="outputTitle">Output</div>
+						<button id="btnClearOutput">Clear Output</button>
+					</div>
+					<div id="outputList"></div>
 				</div>
-				<div id="outputList"></div>
-				
 			</div>
 		</div>
 	</div>
-	
+
+
+
 
 </body>
 </html>

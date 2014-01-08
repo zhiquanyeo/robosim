@@ -1,7 +1,7 @@
-define(['jquery', 'underscore',
+define(['jquery', 'jqxwidgets', 'underscore',
     'robot', 'field', 'sensors/rangefinder',
     'simulation', 'ast/parser', 'samples'],
-function($, _, Robot, Field, RangeFinder,
+function($, jqxWidgets, _, Robot, Field, RangeFinder,
     Simulation, Parser, Samples) {
 
     var mouseDown = false;
@@ -66,50 +66,12 @@ function($, _, Robot, Field, RangeFinder,
             });
 
             //UI
-            var splitter = document.getElementById('horizontalSplitter');
-            var vSplitter = document.getElementById('verticalSplitter');
-            var editorPane = document.getElementById('editorPane');
+            $('#mainSplitter').jqxSplitter( { height: '100%', width: '100%', orientation: 'vertical', panels: [{size: '50%'}, {size:'50%'}]});
+            $('#outputSplitter').jqxSplitter({height: '100%', width: '100%', orientation: 'horizontal', panels: [{size: '50%'}, {size: '50%'}]});
 
-            splitter.addEventListener('mousedown', function (e) {
-                mouseDown = true;
-                lastY = e.clientY;
-            });
-
-            vSplitter.addEventListener('mousedown', function (e) {
-                vMouseDown = true;
-                lastX = e.clientX;
-            })
-
-            window.addEventListener('mouseup', function (e) {
-                mouseDown = false;
-                vMouseDown = false;
-            });
-
-            window.addEventListener('mousemove', function(e) {
-                if (mouseDown) {
-                    var currY = e.clientY;
-                    var delta = lastY - currY;
-
-                    var height = parseInt(editorPane.style.height, 10);
-                    height += delta;
-                    editorPane.style.height = height + 'px';
-                    lastY = currY;
-
-                    theField.forceRedraw();
-                    editor.resize();
-                }
-                else if (vMouseDown) {
-                    var currX = e.clientX;
-                    var delta = lastX - currX;
-
-                    var width = parseInt(outputArea.style.width, 10);
-                    width += delta;
-
-                    outputArea.style.width = width + 'px';
-                    lastX = currX;
-                    editor.resize();
-                }
-
+            $('#mainSplitter').on('resize', function() {
+                theField.forceRedraw();
+                editor.resize();
             });
 
             var boundingBoxCheckbox = document.getElementById('chkBoundingBox');
@@ -243,6 +205,8 @@ function($, _, Robot, Field, RangeFinder,
                 robot.rotationalSpeed = 0;
                 robot.bearing = 0;
             }
+
+            theField.forceRedraw();
         }
     };
 });
