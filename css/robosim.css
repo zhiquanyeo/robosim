@@ -34,6 +34,10 @@
   display: -webkit-flex;
   -webkit-flex-flow: row; }
 
+#codeArea {
+  display: -webkit-flex;
+  -webkit-flex-flow: column; }
+
 #editorArea {
   -webkit-flex: 1 1 auto; }
 
