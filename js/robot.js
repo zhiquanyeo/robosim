@@ -155,6 +155,9 @@ function () {
 		// Collision event fired (we really only want to fire this once)
 		var _collisionEventFired = false;
 
+		//list of tick callbacks
+		var _tickCallbacks = [];
+
 		Object.defineProperty(this, 'position', {
 			get: function () {
 				return _position;
@@ -391,6 +394,13 @@ function () {
 			};
 		}.bind(this);
 
+		//For use with sensors that are time based (gyro etc)
+		//This allows them to register themselves with the robot Tick, 
+		//so they can update themselves
+		this.registerWithTick = function (callback) {
+			_tickCallbacks.push(callback);
+		}.bind(this);
+
 		this.processTick = function(timeDelta) {
 			//timeDelta is how much time has elapsed between calls to tick (in ms)
 			var timeInSec = timeDelta / 1000;
@@ -418,6 +428,11 @@ function () {
 				y: this.position.y - vDist
 			};
 
+			//Send a message to all tick handlers with timeDelta
+			for (var i = 0, len = _tickCallbacks.length; i < len; i++) {
+				var tickCallback = _tickCallbacks[i];
+				tickCallback(timeDelta);
+			}
 		}.bind(this);
 
 		this.forceRedraw = function() {

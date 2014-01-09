@@ -1,7 +1,9 @@
 define(['jquery', 'jqxwidgets', 'underscore',
-    'robot', 'field', 'sensors/rangefinder',
+    'robot', 'field', 
+    'sensors/rangefinder', 'sensors/gyro',
     'simulation', 'ast/parser', 'samples'],
-function($, jqxWidgets, _, Robot, Field, RangeFinder,
+function($, jqxWidgets, _, Robot, Field, 
+    RangeFinder, Gyro,
     Simulation, Parser, Samples) {
 
     var mouseDown = false;
@@ -25,6 +27,9 @@ function($, jqxWidgets, _, Robot, Field, RangeFinder,
             //Set up the robot
             var frontRangeFinder = new RangeFinder();
             robot.addSensor(frontRangeFinder, robot.SensorMountPoint.FRONT);
+
+            var gyro = new Gyro();
+            robot.addSensor(gyro, robot.SensorMountPoint.CHASSIS);
 
             var theField = new Field(document.getElementById('playingField'), {
                 width: 200,
