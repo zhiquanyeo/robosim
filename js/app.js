@@ -1,8 +1,8 @@
 define(['jquery', 'jqxwidgets', 'underscore',
-    'robot', 'field', 
+    'robot', 'field', 'fieldobstacle',
     'sensors/rangefinder', 'sensors/gyro',
     'simulation', 'ast/parser', 'samples'],
-function($, jqxWidgets, _, Robot, Field, 
+function($, jqxWidgets, _, Robot, Field, FieldObstacle,
     RangeFinder, Gyro,
     Simulation, Parser, Samples) {
 
@@ -35,6 +35,15 @@ function($, jqxWidgets, _, Robot, Field,
                 width: 200,
                 height: 100
             });
+
+            //==== Add some obstacles ===
+            //TODO: Need some way to access the enums
+            var obstacle1 = new FieldObstacle({x: 75, y: 50}, 
+                {width: 5, height: 10}, 0, 1);
+
+            theField.addItem(obstacle1, theField.FieldItemType.OBSTACLE);
+
+            //==== End obstacles ====
 
             robot.addEventHandler('collision', function() {
                 console.log('Robot had a collision!');

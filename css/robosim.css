@@ -105,3 +105,15 @@
   box-sizing: border-box;
   border: 1px solid #000;
   background: #efefef; }
+
+.sim-obstacle {
+  position: absolute;
+  box-sizing: border-box; }
+  .sim-obstacle.color-GRAY {
+    background: #ababab; }
+  .sim-obstacle.color-RED {
+    background: red; }
+  .sim-obstacle.color-GREEN {
+    background: green; }
+  .sim-obstacle.color-BLUE {
+    background: blue; }

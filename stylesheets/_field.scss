@@ -6,3 +6,23 @@
 	background: #efefef;
 }
 
+.sim-obstacle {
+	position: absolute;;
+	box-sizing: border-box;
+
+	&.color-GRAY {
+		background: #ababab;
+	}
+
+	&.color-RED {
+		background: red;
+	}
+
+	&.color-GREEN {
+		background: green;
+	}
+
+	&.color-BLUE {
+		background: blue;
+	}
+}
