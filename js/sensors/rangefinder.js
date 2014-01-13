@@ -7,6 +7,7 @@ function() {
 	configure(<json object>) - configure the sensor (config details depend on sensor)
 	getValue() - return a number representing whatever value the sensor is reporting
 	getDescription() - return a description of the sensor
+	reset() - resets the sensor
 
 	*/
 	function RangeFinder(minRange, maxRange) {
@@ -165,6 +166,10 @@ function() {
 
 		this.getDescription = function() {
 			return "Linear Rangefinder";
+		};
+
+		this.reset = function() {
+
 		};
 	}
 

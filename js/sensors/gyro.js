@@ -30,9 +30,28 @@ function() {
 					_hasRegisteredWithTick = true;
 					_robot.registerWithTick(function(timeDelta) {
 						timeDelta /= 1000; //convert to seconds
-						var turnDelta = _robot.bearing - _lastBearing;
+						
+						var currBearing = _robot.bearing;
+						//we must assume that we will be turning less than 360/sec
+						//if lastBearing in right half, and currBearing in left
+						//then we are turning to the left
+
+						//If lastBearing in left half and currBearing in right,
+						//then we are turning to the right
+						if (_lastBearing >= 0 && _lastBearing < 180 &&
+							currBearing >= 180 && currBearing < 360) {
+							_lastBearing += 360; //just add one more circle to this
+						}
+						else if (_lastBearing >= 180 && _lastBearing < 360 &&
+							currBearing >= 0 && currBearing < 180) {
+							currBearing += 360;
+						}
+
+						var turnDelta = currBearing - _lastBearing;
 						var degPerSecond = turnDelta / timeDelta;
 						_lastBearing = _robot.bearing;
+
+						_currRate = degPerSecond;
 					});
 				}
 			}
@@ -53,12 +72,20 @@ function() {
 				//convert to radians
 				return _currRate * Math.PI / 180;
 			}
+
 			return _currRate;
 		};
 
 		this.getDescription = function() {
 			return 'Gyro';
 		}
+
+		this.reset = function() {
+			_lastBearing = 0;
+			if (_robot) {
+				_lastBearing = _robot.bearing;
+			}
+		};
 	}
 
 	Gyro.prototype.Units = {

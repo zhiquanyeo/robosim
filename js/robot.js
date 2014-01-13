@@ -471,6 +471,15 @@ function () {
 			}
 		}.bind(this);
 
+		this.resetSensors = function () {
+			for (var i = 0, len = _sensors.length; i < len; i++) {
+				var sensor = _sensors[i];
+				if (sensor.reset) {
+					sensor.reset();
+				}
+			}
+		}.bind(this);
+
 		//Event handlers
 		this.addEventHandler = function(event, callback) {
 			var handlers = _eventHandlers[event];

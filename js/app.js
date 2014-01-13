@@ -209,6 +209,7 @@ function($, jqxWidgets, _, Robot, Field,
                 robot.speed = 0;
                 robot.rotationalSpeed = 0;
                 robot.bearing = 0;
+                robot.resetSensors();
             }
 
             theField.forceRedraw();
