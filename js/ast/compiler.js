@@ -14,7 +14,7 @@ function(TypeChecker, AST) {
 	}
 
 	//The Program. Self contained execution unit, including program counter
-	function Program(memmap, mainOffset) {
+	function Program(memmap, globalVars, mainOffset) {
 		var _pc = 0; //program counter;
 		var _sp = 0; //Stack Pointer
 		var _bp = 0; //Base pointer
@@ -38,6 +38,11 @@ function(TypeChecker, AST) {
 		_bp = 1;
 
 		var _progmem = memmap;
+
+		//this is an array of global variables
+		//they are accessed as offsets from the EGV pointer
+		var _globals = globalVars;
+
 		//Start the PC at main
 		_pc = mainOffset;
 
@@ -96,6 +101,10 @@ function(TypeChecker, AST) {
 				case 'register':
 					return registers[addrInfo.value];
 				case 'pointer':
+					if (addrInfo.value === 'EGV') {
+						//we know globals will always have an offset
+						return _globals[addrInfo.offset];
+					}
 					if (addrInfo.value === 'EBP') {
 						actualAddress = _bp;
 					}
@@ -140,6 +149,9 @@ function(TypeChecker, AST) {
 					break;
 				case 'pointer':
 					var addr;
+					if (addrInfo.value === 'EGV') {
+						_globals[addrInfo.offset] = _getValue(valueInfo);
+					}
 					if (addrInfo.value === 'EBP')
 						addr = _bp;
 					else if (addrInfo.value === 'ESP')
@@ -1564,7 +1576,7 @@ function(TypeChecker, AST) {
 						break;
 				}
 			}
-
+			variable.isGlobal = true;
 			context[variable.name] = variable;
 		}
 	}
@@ -1689,8 +1701,12 @@ function(TypeChecker, AST) {
 				var updateMap = _compileExpression(statement, blockContext);
 				map = map.concat(updateMap);
 				if (statement.expression.nodeType === 'Identifier') {
+					var item = _getRawFromContext(statement.expression.label, blockContext, statement.expression.loc);
+					var destType = 'pendingVariable';
+					if (item.isGlobal)
+						destType = 'pendingGlobal';
 					map.push(new POPInstruction({
-						type: 'pendingVariable',
+						type: destType,
 						value: {
 							name: statement.expression.label
 						}
@@ -1739,8 +1755,12 @@ function(TypeChecker, AST) {
 					}
 				}
 				else {
+					var destType = 'pendingVariable';
+					if (targetInfo.isGlobal)
+						destType = 'pendingGlobal';
+
 					sourceValue = {
-						type: 'pendingVariable', 
+						type: destType, 
 						value: {
 							name: pInit.name
 						}
@@ -1827,9 +1847,13 @@ function(TypeChecker, AST) {
 			}, statement, "Push raw value on to stack while processing expression"));
 		}
 		else if (statement.nodeType === "Identifier") {
-			_getRawFromContext(statement.label, context, statement.loc);
+			var item = _getRawFromContext(statement.label, context, statement.loc);
+			var type = 'pendingVariable';
+			if (item.isGlobal) {
+				type = 'pendingGlobal'
+			}
 			map.push(new PUSHInstruction({
-				type: 'pendingVariable',
+				type: type,
 				value: {
 					name: statement.label
 				}
@@ -2034,7 +2058,6 @@ function(TypeChecker, AST) {
 
 	function _compileAssignment (statement, context) {
 		if (VERBOSE) console.log('compiling assignment expression: ', statement);
-
 		var map = [];
 
 		//verify that we have an appropriate left side
@@ -2045,7 +2068,9 @@ function(TypeChecker, AST) {
 		var storageLocation = {};
 		if (statement.left.nodeType === "Identifier") {
 			//attempt to query the context
-			_getRawFromContext(statement.left.label, context, statement.left.loc);
+			var item = _getRawFromContext(statement.left.label, context, statement.left.loc);
+			if (item.isGlobal)
+				storageLocation.isGlobal = true;
 			storageLocation.name = statement.left.label;
 		}
 		else {
@@ -2059,6 +2084,8 @@ function(TypeChecker, AST) {
 				throw new CompilerError("'" + statement.left.base.label + "' is not an array and does not support indexing", statement.left.base.loc);
 			}
 			storageLocation.name = statement.left.base.label;
+			if (data.isGlobal)
+				storageLocation.isGlobal = true;
 
 			if (VERBOSE) console.log('index: ', statement.left.property);
 
@@ -2097,9 +2124,12 @@ function(TypeChecker, AST) {
 		//if it's a literal, we just need to do the assignment
 		if (newRight.nodeType === "Literal") {
 			//Generate a MOV command, with storageLocation as the destination
+			var sourceType = 'pendingVariable';
+			if (storageLocation.isGlobal)
+				sourceType = 'pendingGlobal';
 			
 			map.push(new MOVInstruction({
-				type: 'pendingVariable', //This tells the compiler that we still need to resolve this
+				type: sourceType, //This tells the compiler that we still need to resolve this
 				value: storageLocation,
 			}, {
 				type: 'raw',
@@ -2108,12 +2138,19 @@ function(TypeChecker, AST) {
 		}
 		else if (newRight.nodeType === "Identifier") {
 			//ensure that the identifier exists
-			_getRawFromContext(newRight.label, context, statement.right.loc);
+			var item = _getRawFromContext(newRight.label, context, statement.right.loc);
+			var sourceType = 'pendingVariable';
+			if (item.isGlobal)
+				sourceType = 'pendingGlobal';
+			var destType = 'pendingVariable';
+			if (storageLocation.isGlobal)
+				destType = 'pendingGlobal';
+
 			map.push(new MOVInstruction({
-				type: 'pendingVariable',
+				type: destType,
 				value: storageLocation,
 			}, {
-				type: 'pendingVariable',
+				type: sourceType,
 				value: {
 					name: newRight.label
 				}
@@ -2127,8 +2164,13 @@ function(TypeChecker, AST) {
 				type: 'register',
 				value: 'R0'
 			}, statement.right, "Put result of expression in R0"));
+
+			var destType = 'pendingVariable';
+			if (storageLocation.isGlobal)
+				destType = 'pendingGlobal';
+
 			map.push(new MOVInstruction({
-				type: 'pendingVariable',
+				type: destType,
 				value: storageLocation,
 			}, {
 				type: 'register',
@@ -2143,8 +2185,13 @@ function(TypeChecker, AST) {
 				type: 'register',
 				value: 'R0'
 			}, statement.right, "Put result of expression in R0"));
+
+			var destType = 'pendingVariable';
+			if (storageLocation.isGlobal)
+				destType = 'pendingGlobal';
+
 			map.push(new MOVInstruction({
-				type: 'pendingVariable',
+				type: destType,
 				value: storageLocation,
 			}, {
 				type: 'register',
@@ -2154,8 +2201,13 @@ function(TypeChecker, AST) {
 		else if (newRight.nodeType === "CallExpression") {
 			var callMap = _compileFunctionCall(newRight, context);
 			map = map.concat(callMap);
+
+			var destType = 'pendingVariable';
+			if (storageLocation.isGlobal)
+				destType = 'pendingGlobal';
+
 			map.push(new MOVInstruction({
-				type: 'pendingVariable',
+				type: destType,
 				value: storageLocation
 			}, {
 				type: 'register',
@@ -2682,8 +2734,12 @@ function(TypeChecker, AST) {
 					var updateMap = _compileExpression(statement, functionContext);
 					memmap = memmap.concat(updateMap);
 					if (statement.expression.nodeType === 'Identifier') {
+						var item = _getRawFromContext(statement.expression.label, functionContext, statement.expression.loc);
+						var destType = 'pendingVariable';
+						if (item.isGlobal) 
+							destType = 'pendingGlobal';
 						memmap.push(new POPInstruction({
-							type: 'pendingVariable',
+							type: destType,
 							value: {
 								name: statement.expression.label
 							}
@@ -2850,7 +2906,10 @@ function(TypeChecker, AST) {
 	function _compile (programAST, builtIns) {
 		if (VERBOSE) console.log("======= COMPILER 2 ========");
 		//Global variables, the _data segment
-		var _data = {};
+		var _globalVarIndex = {};
+
+		var _globalVars = [];
+		var _gVarOffset = 0;
 
 		//Store addresses of function entry points
 		var _functions = {};
@@ -2901,6 +2960,16 @@ function(TypeChecker, AST) {
 			//Handle variable declarations
 			if (statement.nodeType === "VariableDeclaration") {
 				_registerVariables(statement, _context, true);
+				for (var gIdx in _context) {
+					var item = _context[gIdx];
+					if (item.type === "variable") {
+						if (_globalVarIndex[gIdx] === undefined) {
+							_globalVarIndex[gIdx] = _gVarOffset;
+							_globalVars.push(item.value);
+							_gVarOffset++;
+						}
+					}
+				}
 			}
 			else if (statement.nodeType === "FunctionDeclaration") {
 				if (_functions[statement.name] !== undefined)
@@ -2926,6 +2995,22 @@ function(TypeChecker, AST) {
 					stmt.offset.value = offset;
 				}
 			}
+			if (stmt.destination) {
+				if (stmt.destination.type === 'pendingGlobal') {
+					var gOffset = _globalVarIndex[stmt.destination.value.name];
+					stmt.destination.type = 'pointer';
+					stmt.destination.value = 'EGV';
+					stmt.destination.offset = gOffset;
+				}
+			}
+			if (stmt.source) {
+				if (stmt.source.type === 'pendingGlobal') {
+					var gOffset = _globalVarIndex[stmt.source.value.name];
+					stmt.source.type = 'pointer';
+					stmt.source.value = 'EGV';
+					stmt.source.offset = gOffset;
+				}
+			}
 		}
 
 		//This stores global scope!
@@ -2938,7 +3023,7 @@ function(TypeChecker, AST) {
 			throw new CompilerError("Expecting a main function but found none", {line: 1, column: 0});
 		}
 
-		var program = new Program(_memmap, _functions["main"]);
+		var program = new Program(_memmap, _globalVars, _functions["main"]);
 
 		//register the builtin implementations
 		for (var i = 0, len = builtIns.length; i < len; i++) {
