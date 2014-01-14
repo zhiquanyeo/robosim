@@ -151,6 +151,7 @@ function(TypeChecker, AST) {
 					var addr;
 					if (addrInfo.value === 'EGV') {
 						_globals[addrInfo.offset] = _getValue(valueInfo);
+						return;
 					}
 					if (addrInfo.value === 'EBP')
 						addr = _bp;
