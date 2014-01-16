@@ -352,7 +352,24 @@ function(TypeChecker, AST) {
 						value: !_getValue(instruciton.destination)
 					});
 				} break;
-
+				case 'AND': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) && _getValue(instruction.source)
+					});
+				} break;
+				case 'OR': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) || _getValue(instruction.source)
+					});
+				} break;
+				case 'XOR': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: _getValue(instruction.destination) ^ _getValue(instruction.source)
+					});
+				} break;
 				//Experimental
 				case 'EXT': {
 					if (VERBOSE) console.log('running external:', instruction);
@@ -560,7 +577,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "AND " + this.destination + ", " + this.source;
+			return "AND " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -593,7 +610,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "OR " + this.destination + ", " + this.source;
+			return "OR " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -626,7 +643,7 @@ function(TypeChecker, AST) {
 		});
 
 		this.toString = function() {
-			return "XOR " + this.destination + ", " + this.source;
+			return "XOR " + _generateTargetString(this.destination) + ", " + _generateTargetString(this.source);
 		}.bind(this);
 	}
 
@@ -2316,7 +2333,9 @@ function(TypeChecker, AST) {
 				statement.condition.operator !== "<" &&
 				statement.condition.operator !== ">" &&
 				statement.condition.operator !== "==" &&
-				statement.condition.operator !== "!=") {
+				statement.condition.operator !== "!=" &&
+				statement.condition.operator !== "&&" &&
+				statement.condition.operator !== "||") {
 				throw new CompilerError("Condition must resolve to boolean value", statement.condition.loc);
 			}
 			var exprMap = _compileExpression(statement.condition, context);
