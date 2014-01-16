@@ -346,6 +346,12 @@ function(TypeChecker, AST) {
 						value: _getValue(instruction.destination) - 1
 					});
 				} break;
+				case 'NOT': {
+					_setValue(instruction.destination, {
+						type: 'raw',
+						value: !_getValue(instruciton.destination)
+					});
+				} break;
 
 				//Experimental
 				case 'EXT': {
@@ -717,6 +723,38 @@ function(TypeChecker, AST) {
 
 		this.toString = function() {
 			return "NEG " + _generateTargetString(this.destination);
+		}.bind(this);
+	}
+
+	function NOTInstruction(dest, executionUnit, comment) {
+		this.destination = dest;
+
+		Object.defineProperty(this, 'type', {
+			get: function() {
+				return 'NOT';
+			},
+			enumerable: true,
+		});
+
+		//For debugging purposes
+		var _executionUnit = executionUnit;
+		var _comment = comment;
+		Object.defineProperty(this, 'executionUnit', {
+			get: function() {
+				return _executionUnit;
+			},
+			enumerable: true,
+		});
+
+		Object.defineProperty(this, 'comment', {
+			get: function() {
+				return _comment;
+			},
+			enumerable: true,
+		});
+
+		this.toString = function() {
+			return "NOT " + _generateTargetString(this.destination);
 		}.bind(this);
 	}
 
@@ -1882,6 +1920,23 @@ function(TypeChecker, AST) {
 					value: 'R0'
 				}, statement.expression, "Push new value back onto stack"));
 			}
+			else if (statement.operator === '!') {
+				map.push(new POPInstruction({
+					type: 'register',
+					value: 'R0',
+				}, statement.expression, "Pop expression value into R0"));
+
+				//negate
+				map.push(new NOTInstruction({
+					type: 'register',
+					value: 'R0'
+				}, statement.operator, "Negate value in R0"));
+
+				map.push(new PUSHInstruction({
+					type: 'register',
+					value: 'R0'
+				}, statement.expression, "Push new value back onto stack"));
+			}
 			else if (statement.operator !== '+') {
 				//anything else, we throw an error
 				//for now...
@@ -2044,6 +2099,34 @@ function(TypeChecker, AST) {
 						value: 'R1',
 					}, statement, "Perform GTE operation on R0 and R1 and store in R0"));
 					break;
+				case "&&":
+					map.push(new ANDInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform AND operation on R0 and R1 and store in R0"));
+					break;
+				case "||":
+					map.push(new ORInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform OR operation on R0 and R1 and store in R0"));
+					break;
+				case "^":
+					map.push(new XORInstruction({
+						type: 'register',
+						value: 'R0',
+					}, {
+						type: 'register',
+						value: 'R1'
+					}, statement, "Perform XOR operation on R0 and R1 and store in R0"));
+					break;
+				
 				default:
 					throw new CompilerError("Operation '" + statement.operator + "' is not supported yet", statement.loc);
 			}
