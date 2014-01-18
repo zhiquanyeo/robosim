@@ -5,10 +5,11 @@ and a robot. This will be the interface by which the outside world starts
 and stops the robot.
 
 */
-define(['ast/compiler', 'linklibs/core', 'linklibs/math'],
-function(Compiler, CoreLib, MathLib) {
+define(['ast/compiler', 'linklibs/core', 'linklibs/math',
+	'sensors/rangefinder', 'sensors/gyro'],
+function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 
-	function Simulation(field, robot, programAST) {
+	function Simulation(field, robot, sensors, programAST) {
 
 		var _playingField = field;
 		var _robot = robot;
@@ -19,6 +20,37 @@ function(Compiler, CoreLib, MathLib) {
 			console.error("Must specify Field and Robot!");
 			return;
 		}
+
+		var sensorImpls = {};
+
+		function generateSensorImp(sensorIdx) {
+			function _sensorImpl() {
+				var sensor = _robot.getSensor(sensorIdx);
+				return sensor.getValue();
+			}
+
+			return _sensorImpl;
+		}
+
+		//==== Set up the sensors that we need ====
+		for (var i = 0, len = sensors.length; i < len; i++) {
+			var sensor = sensors[i];
+			//add the sensor to the robot
+			var realSensor;
+			if (sensor.type === 'RangeFinder') {
+				realSensor = new RangeFinder();
+			}
+			else if (sensor.type === 'Gyro') {
+				realSensor = new Gyro();
+			}
+
+			if (realSensor) {
+				robot.addSensor(realSensor, sensor.position);
+				sensorImpls[sensor.name] = generateSensorImp(i);
+			}
+		}
+
+		//==== End sensor set up ====
 
 		//Store the last timestamp we got (for use during ticks);
 		var _lastTime;
@@ -50,16 +82,6 @@ function(Compiler, CoreLib, MathLib) {
 			_robot.rotationalSpeed = rotSpeed;
 		}
 
-		function _getTimeImpl() {
-			return (new Date()).getTime();
-		}
-
-		function _getFrontDistance() {
-			var sensor = _robot.getSensor(0);
-			return sensor.getValue();
-		}
-
-
 		var builtInFunctions = [
 			{
 				name: 'print',
@@ -88,13 +110,18 @@ function(Compiler, CoreLib, MathLib) {
 				}],
 				implementation: _robotSetRotationImpl
 			},
-			{
-				name: 'Robot~getFrontDistance',
+		];
+
+		//Link in the sensor functions
+		//Sensors are accessed via Robot.<sensorname>.getValue()
+		for (var sensorName in sensorImpls) {
+			builtInFunctions.push({
+				name: 'Robot~' + sensorName + '~getValue',
 				retType: 'double',
 				parameters: [],
-				implementation: _getFrontDistance
-			}
-		];
+				implementation: sensorImpls[sensorName]
+			});
+		}
 
 		//Link in libraries
 		builtInFunctions = builtInFunctions.concat(CoreLib);

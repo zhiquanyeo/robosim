@@ -24,24 +24,35 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             
             _resetRobot();
             
-            //Set up the robot
-            var frontRangeFinder = new RangeFinder();
-            robot.addSensor(frontRangeFinder, robot.SensorMountPoint.FRONT);
-
-            var gyro = new Gyro();
-            robot.addSensor(gyro, robot.SensorMountPoint.CHASSIS);
-
+            
             var theField = new Field(document.getElementById('playingField'), {
                 width: 200,
                 height: 100
             });
 
-            //==== Add some obstacles ===
-            //TODO: Need some way to access the enums
-            var obstacle1 = new FieldObstacle({x: 75, y: 50}, 
-                {width: 5, height: 10}, 0, 1);
+            //==== Handle Sensor Setup ====
+            var sensors = [
+                {
+                    type: 'RangeFinder',
+                    position: robot.SensorMountPoint.FRONT,
+                    name: 'rangeFinder'
+                },
+                {
+                    type: 'Gyro',
+                    position: robot.SensorMountPoint.CHASSIS,
+                    name: 'gyro'
+                }
+            ];
 
-            theField.addItem(obstacle1, theField.FieldItemType.OBSTACLE);
+            //TODO At some point, we should just allow the user to configure the
+            //list of sensors
+            //=== END Sensor Setup ===
+
+            //==== Add some obstacles ===
+            var obstacle1 = new FieldObstacle({x: 75, y: 50}, 
+                {width: 5, height: 10}, 0, FieldObstacle.ObstacleColor.RED);
+
+            //theField.addItem(obstacle1, theField.FieldItemType.OBSTACLE);
 
             //==== End obstacles ====
 
@@ -113,7 +124,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             }
 
             //Simulation Setup
-            var simulation = new Simulation(theField, robot);
+            var simulation = new Simulation(theField, robot, sensors);
 
             simulation.addEventHandler('runStateChanged', function(isRunning) {
                 if (isRunning) {
