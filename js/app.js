@@ -151,6 +151,10 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 }
             });
 
+            simulation.addEventHandler('networkTableValueUpdated', function(e) {
+                printOutput("NET", e.varName + ": " + e.value);
+            });
+
             startStopBtn.addEventListener('click', function() {
                 if (simulation.isRunning) {
                     simulation.stop();

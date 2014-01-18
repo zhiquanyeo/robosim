@@ -82,6 +82,13 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 			_robot.rotationalSpeed = rotSpeed;
 		}
 
+		function _networkTableImplementation(varName, value) {
+			_fireEvent('networkTableValueUpdated', {
+				varName: varName,
+				value: value
+			});
+		}
+
 		var builtInFunctions = [
 			{
 				name: 'print',
@@ -110,6 +117,18 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				}],
 				implementation: _robotSetRotationImpl
 			},
+			{
+				name: 'Robot~networkTable~putValue',
+				retType: 'void',
+				parameters: [{
+					varType: 'string',
+					name: 'varName'
+				}, {
+					varType: 'string',
+					name: 'value'
+				}],
+				implementation: _networkTableImplementation
+			}
 		];
 
 		//Link in the sensor functions
