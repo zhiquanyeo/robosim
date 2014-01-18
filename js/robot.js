@@ -219,7 +219,7 @@ function () {
 		Object.defineProperty(this, 'size', {
 			get: function() {
 				return _size;
-			}
+			},
 		});
 
 		Object.defineProperty(this, 'speed', {
@@ -510,6 +510,14 @@ function () {
 		BACK: 3,
 		LEFT: 4
 	};
+
+	Robot.SensorMountPoint = {
+		CHASSIS: 0,
+		FRONT: 1,
+		RIGHT: 2,
+		BACK: 3,
+		LEFT: 4
+	}
 
 	return Robot;
 });

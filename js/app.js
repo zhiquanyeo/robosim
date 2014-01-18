@@ -11,8 +11,88 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
     var lastX;
     var lastY;
 
+    function _generateSensorLabel(sensorEntry) {
+        var positionString;
+        switch (sensorEntry.position) {
+            case Robot.SensorMountPoint.FRONT: 
+                positionString = 'FRONT';
+                break;
+            case Robot.SensorMountPoint.BACK: 
+                positionString = 'BACK';
+                break;
+            case Robot.SensorMountPoint.RIGHT: 
+                positionString = 'RIGHT';
+                break;
+            case Robot.SensorMountPoint.LEFT: 
+                positionString = 'LEFT';
+                break;
+            default:
+                positionString = 'CHASSIS';
+        }
+
+        var label = "'" + sensorEntry.name + "' - Type: " + sensorEntry.type + ", Position: " + positionString
+        sensorEntry.label = label;
+        sensorEntry.value = sensorEntry.name;
+    }
+
+    function _sensorExists(sensorName, sensorList) {
+        for (var i = 0, len = sensorList.length; i < len; i++) {
+            var sensorItem = sensorList[i];
+            if (sensorItem.name === sensorName) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     return {
         start: function() {
+
+            //Setup entries
+            var txtFieldWidth = document.getElementById('txtFieldWidth');
+            var txtFieldHeight = document.getElementById('txtFieldHeight');
+            var btnUpdateField = document.getElementById('btnUpdateField');
+
+            var txtSensorName = document.getElementById('txtSensorName');
+            var cboSensorType = document.getElementById('cboSensorType');
+            var cboSensorPosition = document.getElementById('cboSensorPosition');
+            var btnAddSensor = document.getElementById('btnAddSensor');
+            var btnDeleteSensor = document.getElementById('btnDeleteSensor');
+            //end setup
+
+            //"Model"
+            var fieldSize = {
+                width: 200,
+                height: 100
+            };
+
+            var sensors = [
+                {
+                    type: 'RangeFinder',
+                    position: Robot.SensorMountPoint.FRONT,
+                    name: 'rangeFinder',
+                },
+                {
+                    type: 'Gyro',
+                    position: Robot.SensorMountPoint.CHASSIS,
+                    name: 'gyro',
+                }
+            ];
+
+            for (var i = 0, len = sensors.length; i < len; i++) {
+                var sensor = sensors[i];
+                _generateSensorLabel(sensor);
+            }
+
+            //hash table of network table values
+            var networkTableValues = {};
+            //End "Model"
+
+            //UI Initialization routines
+            txtFieldWidth.value = fieldSize.width;
+            txtFieldHeight.value = fieldSize.height;
+            //End UI Init
+            
 
             var isRunning = false;
             var timerToken;
@@ -25,28 +105,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             _resetRobot();
             
             
-            var theField = new Field(document.getElementById('playingField'), {
-                width: 200,
-                height: 100
-            });
-
-            //==== Handle Sensor Setup ====
-            var sensors = [
-                {
-                    type: 'RangeFinder',
-                    position: robot.SensorMountPoint.FRONT,
-                    name: 'rangeFinder'
-                },
-                {
-                    type: 'Gyro',
-                    position: robot.SensorMountPoint.CHASSIS,
-                    name: 'gyro'
-                }
-            ];
-
-            //TODO At some point, we should just allow the user to configure the
-            //list of sensors
-            //=== END Sensor Setup ===
+            var theField = new Field(document.getElementById('playingField'), fieldSize);
 
             //==== Add some obstacles ===
             var obstacle1 = new FieldObstacle({x: 75, y: 50}, 
@@ -103,10 +162,64 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             $('#mainTabs').jqxTabs({width: '100%', height: '100%', position:'top'});
             $('#outputTabs').jqxTabs({width: '100%', height: '100%', position: 'top'});
 
+            $('#sensorList').jqxListBox({source: sensors, width: '100%', height: 200});
+            
+
+            $('#addSensorPanel').jqxExpander({width: '100%', expanded: false});
 
             var boundingBoxCheckbox = document.getElementById('chkBoundingBox');
             boundingBoxCheckbox.addEventListener('change', function() {
                 robot.showBoundingBox = boundingBoxCheckbox.checked;
+            });
+
+            btnUpdateField.addEventListener('click', function() {
+                var tempWidth = parseInt(txtFieldWidth.value);
+                var tempHeight = parseInt(txtFieldHeight.value);
+
+                if (!isNaN(tempWidth) && !isNaN(tempHeight)) {
+                    fieldSize.width = tempWidth;
+                    fieldSize.height = tempHeight;
+                }
+                else {
+                    txtFieldWidth.value = fieldSize.width;
+                    txtFieldHeight.value = fieldSize.height;
+                }
+
+                theField.dimensions = fieldSize;
+            });
+
+            btnDeleteSensor.addEventListener('click', function() {
+                var selIndex = $('#sensorList').jqxListBox('getSelectedIndex');
+                console.log('selectedIndex: ', selIndex);
+                if (selIndex !== -1) {
+                    sensors.splice(selIndex, 1);
+                    $('#sensorList').jqxListBox('refresh', true);
+                }
+            });
+
+            btnAddSensor.addEventListener('click', function() {
+                var selSensorType = cboSensorType.options.item(cboSensorType.selectedIndex);
+                var selSensorPosition = cboSensorPosition.options.item(cboSensorPosition.selectedIndex);
+                
+                var sensorName = txtSensorName.value.trim();
+                if (sensorName.length === 0) {
+                    alert('Sensor name cannot be empty');
+                    return;
+                }
+                else {
+                    if (_sensorExists(sensorName, sensors)) {
+                        alert('Sensor name already exists');
+                        return;
+                    }
+                    var sensorObj = {
+                        type: selSensorType.value,
+                        position: parseInt(selSensorPosition.value),
+                        name: sensorName
+                    };
+                    _generateSensorLabel(sensorObj);
+                    sensors.push(sensorObj);
+                    $('#sensorList').jqxListBox('refresh', true);
+                }
             });
 
 

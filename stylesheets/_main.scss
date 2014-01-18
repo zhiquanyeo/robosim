@@ -44,6 +44,8 @@
 	display: -webkit-flex;
 	-webkit-flex-flow: column;
 	height: 100%;
+	padding-left: 5px;
+	padding-right: 5px;
 }
 
 #editorArea {
@@ -91,3 +93,16 @@
 	width: 100%;
 	left: 0;
 }
+
+#envSetupArea {
+	display: -webkit-flex;
+	-webkit-flex-flow: column;
+	height: 100%;
+	padding: 5px;
+}
+
+.horizontalLayout {
+	display: -webkit-flex;
+	-webkit-flex-flow: row;
+}
+

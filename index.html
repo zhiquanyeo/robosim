@@ -27,16 +27,60 @@
 								<select id="cboSamples"></select>
 							</label>
 							<button id="btnLoadSample">Load</button>
-							<span style="width: 100px">&nbsp;</span>
-							<label>Show Robot Bounding Box
-								<input type="checkbox" id="chkBoundingBox"/>
-							</label>
+							
 						</div>
 						<div id="editorArea"></div>
 					</div>
 				</div>
 				<div id="envSetupArea">
-					Environment Setup
+					<h3>Field Setup</h3>
+					<div class="horizontalLayout">
+						<span>Field Dimensions: (W)</span>
+						<input type="number" id="txtFieldWidth" width="40"/>
+						<span>&nbsp;X (H)</span>
+						<input type="number" id="txtFieldHeight" width="40"/>
+						<button id="btnUpdateField">Update Dimensions</button>
+					</div>
+					<hr/>
+					<!-- Robot Environment -->
+					<h3>Robot Setup</h3>
+					<label>Show Robot Bounding Box
+						<input type="checkbox" id="chkBoundingBox"/>
+					</label>
+					<h4>Sensors</h4>
+					<div id="sensorList"></div>
+					<button id="btnDeleteSensor">Delete Selected Sensor</button>
+					<div id="addSensorPanel">
+						<div>Add Sensor</div>
+						<div>
+							<div>
+								<label>Sensor Name: 
+									<input type="text" id="txtSensorName"/>
+								</label>
+							</div>
+							<div>
+								<label>Sensor Type: 
+									<select id="cboSensorType">
+										<option value="RangeFinder">Range Finder</option>
+										<option value="Gyro">Gyro</option>
+									</select>
+								</label>
+							</div>
+							<div>
+								<label>Position: 
+									<select id="cboSensorPosition">
+										<option value="0">Chassis</option>
+										<option value="1">Front</option>
+										<option value="2">Right</option>
+										<option value="3">Back</option>
+										<option value="4">Left</option>
+									</select>
+								</label>
+							</div>
+							<button id="btnAddSensor">Add Sensor</button>
+						</div>
+					</div>
+					<hr/>
 				</div>
 			</div>
 		</div>
