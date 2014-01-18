@@ -99,6 +99,11 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 editor.resize();
             });
 
+            //set up the tabs in the UI
+            $('#mainTabs').jqxTabs({width: '100%', height: '100%', position:'top'});
+            $('#outputTabs').jqxTabs({width: '100%', height: '100%', position: 'top'});
+
+
             var boundingBoxCheckbox = document.getElementById('chkBoundingBox');
             boundingBoxCheckbox.addEventListener('change', function() {
                 robot.showBoundingBox = boundingBoxCheckbox.checked;
