@@ -2216,9 +2216,34 @@ function(TypeChecker, AST) {
 		}
 
 		//simplify the right side expression
-		var newRight = statement.right;
-		if (statement.right.cfold) {
-			newRight = statement.right.cfold();
+		//check the operator first
+		var newRight;
+		
+		if (statement.operator != '=') {
+			var newOp;
+			switch (statement.operator) {
+				case '+=':
+					newOp = '+';
+					break;
+				case '-=':
+					newOp = '-';
+					break;
+				case '*=':
+					newOp = '*';
+					break;
+				case '/=':
+					newOp = '/';
+					break;
+					
+			}
+			newRight = AST.binaryExpression(newOp, statement.left, statement.right, statement.right.loc);
+		}
+		else { 
+			newRight = statement.right;
+		}
+
+		if (newRight.cfold) {
+			newRight = newRight.cfold();
 		}
 		if (VERBOSE) console.log('newRight: ', newRight);
 
