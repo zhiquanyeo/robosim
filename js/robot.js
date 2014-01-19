@@ -329,6 +329,11 @@ function () {
 		this.getSensor = function (index) {
 			return _sensors[index];
 		};
+
+		//Used to remove all sensors from the robot
+		this.removeAllSensors = function() {
+			_sensors.length = 0;
+		}
 		
 		//Field related functionality
 		this.registerWithField = function (field) {

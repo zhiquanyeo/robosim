@@ -131,10 +131,12 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 			}
 		];
 
+		var sensorLibs = [];
+
 		//Link in the sensor functions
 		//Sensors are accessed via Robot.<sensorname>.getValue()
 		for (var sensorName in sensorImpls) {
-			builtInFunctions.push({
+			sensorLibs.push({
 				name: 'Robot~' + sensorName + '~getValue',
 				retType: 'double',
 				parameters: [],
@@ -203,7 +205,7 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 			//This will load and compile
 			_programAST = ast;
 
-			_program = Compiler.compile(ast, builtInFunctions);
+			_program = Compiler.compile(ast, builtInFunctions.concat(sensorLibs));
 		}
 
 		this.reset = function() {
@@ -220,6 +222,39 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 			}
 
 			handlers.push(callback);
+		};
+
+		this.updateRobotSensors = function(sensors) {
+			_robot.removeAllSensors();
+			sensorImpls = {};
+
+			sensorLibs = [];
+
+			for (var i = 0, len = sensors.length; i < len; i++) {
+				var sensor = sensors[i];
+				//add the sensor to the robot
+				var realSensor;
+				if (sensor.type === 'RangeFinder') {
+					realSensor = new RangeFinder();
+				}
+				else if (sensor.type === 'Gyro') {
+					realSensor = new Gyro();
+				}
+
+				if (realSensor) {
+					robot.addSensor(realSensor, sensor.position);
+					sensorImpls[sensor.name] = generateSensorImp(i);
+				}
+			}
+
+			for (var sensorName in sensorImpls) {
+				sensorLibs.push({
+					name: 'Robot~' + sensorName + '~getValue',
+					retType: 'double',
+					parameters: [],
+					implementation: sensorImpls[sensorName]
+				});
+			}
 		};
 
 		function _fireEvent (event, data) {

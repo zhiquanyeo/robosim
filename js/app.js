@@ -30,7 +30,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 positionString = 'CHASSIS';
         }
 
-        var label = "'" + sensorEntry.name + "' - Type: " + sensorEntry.type + ", Position: " + positionString
+        var label = sensorEntry.type + ', Position: ' + positionString + ', Accessor: Robot.' + sensorEntry.name;
         sensorEntry.label = label;
         sensorEntry.value = sensorEntry.name;
     }
@@ -62,8 +62,8 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
 
             //"Model"
             var fieldSize = {
-                width: 200,
-                height: 100
+                width: 54,
+                height: 24
             };
 
             var sensors = [
@@ -100,7 +100,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             var errorLine = null;
             var EditorRange = ace.require('ace/range').Range;
             
-            var robot = new Robot({width:10,height:10});
+            var robot = new Robot({width: 2, height: 2});
             
             _resetRobot();
             
@@ -186,40 +186,6 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 }
 
                 theField.dimensions = fieldSize;
-            });
-
-            btnDeleteSensor.addEventListener('click', function() {
-                var selIndex = $('#sensorList').jqxListBox('getSelectedIndex');
-                console.log('selectedIndex: ', selIndex);
-                if (selIndex !== -1) {
-                    sensors.splice(selIndex, 1);
-                    $('#sensorList').jqxListBox('refresh', true);
-                }
-            });
-
-            btnAddSensor.addEventListener('click', function() {
-                var selSensorType = cboSensorType.options.item(cboSensorType.selectedIndex);
-                var selSensorPosition = cboSensorPosition.options.item(cboSensorPosition.selectedIndex);
-                
-                var sensorName = txtSensorName.value.trim();
-                if (sensorName.length === 0) {
-                    alert('Sensor name cannot be empty');
-                    return;
-                }
-                else {
-                    if (_sensorExists(sensorName, sensors)) {
-                        alert('Sensor name already exists');
-                        return;
-                    }
-                    var sensorObj = {
-                        type: selSensorType.value,
-                        position: parseInt(selSensorPosition.value),
-                        name: sensorName
-                    };
-                    _generateSensorLabel(sensorObj);
-                    sensors.push(sensorObj);
-                    $('#sensorList').jqxListBox('refresh', true);
-                }
             });
 
 
@@ -346,8 +312,44 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 }
             });
 
+            btnAddSensor.addEventListener('click', function() {
+                var selSensorType = cboSensorType.options.item(cboSensorType.selectedIndex);
+                var selSensorPosition = cboSensorPosition.options.item(cboSensorPosition.selectedIndex);
+                
+                var sensorName = txtSensorName.value.trim();
+                if (sensorName.length === 0) {
+                    alert('Sensor name cannot be empty');
+                    return;
+                }
+                else {
+                    if (_sensorExists(sensorName, sensors)) {
+                        alert('Sensor name already exists');
+                        return;
+                    }
+                    var sensorObj = {
+                        type: selSensorType.value,
+                        position: parseInt(selSensorPosition.value),
+                        name: sensorName
+                    };
+                    _generateSensorLabel(sensorObj);
+                    sensors.push(sensorObj);
+                    $('#sensorList').jqxListBox('refresh', true);
+                    simulation.updateRobotSensors(sensors);
+                }
+            });
+
+            btnDeleteSensor.addEventListener('click', function() {
+                var selIndex = $('#sensorList').jqxListBox('getSelectedIndex');
+                console.log('selectedIndex: ', selIndex);
+                if (selIndex !== -1) {
+                    sensors.splice(selIndex, 1);
+                    $('#sensorList').jqxListBox('refresh', true);
+                    simulation.updateRobotSensors(sensors);
+                }
+            });
+
             function _resetRobot() {
-                robot.setPositionXY(50, 50);
+                robot.setPositionXY(10, 10);
                 robot.speed = 0;
                 robot.rotationalSpeed = 0;
                 robot.bearing = 0;
