@@ -58,6 +58,8 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             var cboSensorPosition = document.getElementById('cboSensorPosition');
             var btnAddSensor = document.getElementById('btnAddSensor');
             var btnDeleteSensor = document.getElementById('btnDeleteSensor');
+
+            var compilerOutput = document.getElementById('compilerOutput');
             //end setup
 
             //"Model"
@@ -204,7 +206,12 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             var outputList = document.getElementById('outputList');
 
             function printOutput(type, message) {
-                outputList.innerHTML += "[" + type + "] " + message + "\n";
+                if (type === 'COMPILE') {
+                    compilerOutput.innerHTML += "[COMPILER] " + message + "\n";
+                }
+                else {
+                    outputList.innerHTML += "[" + type + "] " + message + "\n";
+                }
             }
 
             //Simulation Setup
@@ -245,6 +252,8 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 }
                 else {
                     simulation.start();
+                    //switch to the console tab
+                    $('#outputTabs').jqxTabs('select', 1); 
                 }
             });
 
@@ -256,7 +265,14 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             compileBtn.addEventListener('click', function() {
                 editor.getSession().clearAnnotations();
                 loaderArea.classList.add('loading');
-                printOutput("SYS", "Beginning Compilation...");
+
+                //Clear out the compiler messages first
+                compilerOutput.innerHTML = '';
+
+                //switch compiler to compiler tab
+                $('#outputTabs').jqxTabs('select', 0); 
+
+                printOutput("COMPILE", "Beginning Compilation...");
 
                 if (errorLine !== null) {
                     editor.getSession().removeMarker(errorLine);
@@ -270,7 +286,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                         simulation.loadProgramAST(result);
                         startStopBtn.disabled = false;
                         loaderArea.classList.remove('loading');
-                        printOutput("SYS", "Compilation Complete");
+                        printOutput("COMPILE", "Compilation Complete");
                     }
                     catch (e) {
                         if (e instanceof ReferenceError || e instanceof TypeError) {
@@ -299,7 +315,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                             errorLine = editor.getSession().addMarker(new EditorRange(line - 1, 0, line, 0), "error", "line");
                         }
                         loaderArea.classList.remove('loading');
-                        printOutput("SYS", e.message);
+                        printOutput("COMPILE", e.message);
                     }
                 }, 0);
             });

@@ -106,3 +106,18 @@
 	-webkit-flex-flow: row;
 }
 
+#compilerOutputArea {
+	user-select: none;
+	-webkit-user-select: none;
+	display: -webkit-flex;
+	-webkit-flex-flow: column;
+	padding: 5px;
+}
+
+#compilerOutput {
+	font-family: monospace;
+	white-space: pre;
+	overflow-y: scroll;
+	min-height: auto;
+	-webkit-flex: 1 1 auto;
+}
