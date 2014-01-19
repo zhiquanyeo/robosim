@@ -45,6 +45,18 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
         return false;
     }
 
+    function _generateNetworkTableView(networkTable) {
+        var retArray = [];
+        for (var key in networkTable) {
+            retArray.push({
+                fieldName: key,
+                fieldValue: networkTable[key]
+            });
+        }
+
+        return retArray;
+    }
+
     return {
         start: function() {
 
@@ -88,6 +100,17 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
 
             //hash table of network table values
             var networkTableValues = {};
+
+            //The data adapter for network tables
+            var networkTableDataSource = {
+                localdata: [],
+                dataType: 'array',
+                dataFields: [
+                    {name: 'fieldName', type: 'string'},
+                    {name: 'fieldValue', type: 'string'}
+                ]
+            }
+            var networkTableDataAdapter = new $.jqx.dataAdapter(networkTableDataSource);
             //End "Model"
 
             //UI Initialization routines
@@ -169,6 +192,17 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
 
             $('#addSensorPanel').jqxExpander({width: '100%', expanded: false});
 
+            //set up the data table
+            $('#networkTable').jqxDataTable({
+                source: networkTableDataAdapter,
+                width: '100%',
+                columnsResize: true,
+                columns: [
+                    {text: 'Field', dataField: 'fieldName', width: 100},
+                    {text: 'Value', dataField: 'fieldValue'}
+                ]
+            });
+
             var boundingBoxCheckbox = document.getElementById('chkBoundingBox');
             boundingBoxCheckbox.addEventListener('change', function() {
                 robot.showBoundingBox = boundingBoxCheckbox.checked;
@@ -243,7 +277,10 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             });
 
             simulation.addEventHandler('networkTableValueUpdated', function(e) {
-                printOutput("NET", e.varName + ": " + e.value);
+                networkTableValues[e.varName] = e.value;
+                networkTableDataSource.localdata = _generateNetworkTableView(networkTableValues);
+                networkTableDataAdapter.dataBind();
+                $("#networkTable").jqxDataTable('updateBoundData');
             });
 
             startStopBtn.addEventListener('click', function() {
@@ -251,9 +288,15 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                     simulation.stop();
                 }
                 else {
+                    //reset the network tables
+                    networkTableValues = {};
+                    networkTableDataSource.localdata = _generateNetworkTableView(networkTableValues);
+                    networkTableDataAdapter.dataBind();
+                    $("#networkTable").jqxDataTable('updateBoundData');
                     simulation.start();
                     //switch to the console tab
                     $('#outputTabs').jqxTabs('select', 1); 
+
                 }
             });
 

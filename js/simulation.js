@@ -98,7 +98,7 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				implementation: _printImplementation
 			},
 			{
-				name: 'Robot~setSpeed',
+				name: 'Robot~drive',
 				retType: 'void',
 				parameters: [{
 					varType: 'double',
