@@ -138,8 +138,10 @@ function () {
 			};
 		}
 
-		var _speed = 0; //in logical units
-		var _rotationalSpeed = 0; //in degrees per second
+		//new speed stuff
+		//all speeds are in logical units per second
+		var _leftSpeed = 0;
+		var _rightSpeed = 0;
 
 		var _bearing = 0; //in degrees
 		
@@ -171,8 +173,8 @@ function () {
 						_boundingBox.x + _boundingBox.width > _playingField.dimensions.width ||
 						_boundingBox.y + _boundingBox.height > _playingField.dimensions.height) {
 						//collision!
-						this.rotationalSpeed = 0;
-						this.speed = 0;
+						this.leftSpeed = 0;
+						this.rightSpeed = 0;
 
 						if (!_collisionEventFired) {
 							_fireEvent('collision');
@@ -222,21 +224,22 @@ function () {
 			},
 		});
 
-		Object.defineProperty(this, 'speed', {
+		//New speed stuff
+		Object.defineProperty(this, 'leftSpeed', {
 			get: function() {
-				return _speed;
+				return _leftSpeed;
 			},
 			set: function(speed) {
-				_speed = speed;
+				_leftSpeed = speed;
 			}
 		});
 
-		Object.defineProperty(this, 'rotationalSpeed', {
+		Object.defineProperty(this, 'rightSpeed', {
 			get: function() {
-				return _rotationalSpeed;
+				return _rightSpeed;
 			},
-			set: function(rotSpeed) {
-				_rotationalSpeed = rotSpeed;
+			set: function(speed) {
+				_rightSpeed = speed;
 			}
 		});
 
@@ -406,32 +409,54 @@ function () {
 			_tickCallbacks.push(callback);
 		}.bind(this);
 
+		//helper function to calculate new position
+		function _calculateNewPosition(prevPos, prevBearing, leftSpeed, rightSpeed, timeInSec) {
+			var plusFactor = leftSpeed + rightSpeed;
+			var minusFactor = rightSpeed - leftSpeed;
+			var theta0 = (prevBearing - 90)/180 * Math.PI; //prev bearing in radians
+			var returnObj = {};
+
+			if (leftSpeed != rightSpeed) {
+				//calculate the angle
+				var theta = theta0 - ((minusFactor * timeInSec) / _size.width) ;
+				returnObj.bearing = theta / Math.PI * 180 + 90;
+				
+				returnObj.position = {
+					x: prevPos.x - ((_size.width * plusFactor) / (2 * minusFactor)) 
+						* ( Math.sin(theta) - Math.sin(theta0) ),
+					y:  prevPos.y + ((_size.width * plusFactor) / (2 * minusFactor)) 
+						* ( Math.cos(theta) - Math.cos(theta0) )
+				}
+			}
+			else {
+				//special case
+				returnObj.bearing = prevBearing;
+				returnObj.position = {
+					x: (plusFactor / 2) * Math.cos(theta0) * timeInSec + prevPos.x,
+					//we need to invert the Y, since going smaller == moving up
+					y: prevPos.y + (plusFactor / 2) * Math.sin(theta0) * timeInSec
+				}
+			}
+
+			return returnObj;
+		}
+
 		this.processTick = function(timeDelta) {
 			//timeDelta is how much time has elapsed between calls to tick (in ms)
 			var timeInSec = timeDelta / 1000;
 
-			//Adjust bearing
-			var currBearing = _bearing;
-			var newBearing = currBearing + (this.rotationalSpeed * timeInSec);
+			var newPos = _calculateNewPosition(this.position, _bearing, 
+							_leftSpeed, _rightSpeed, timeInSec);
+			newBearing = newPos.bearing;
 			if (newBearing >= 360) {
 				newBearing -= 360;
 			}
 			else if (newBearing < 0) {
 				newBearing += 360;
 			}
-
 			_bearing = newBearing;
+			this.position = newPos.position;
 
-			var currPos = this.position;
-			var distToMove = this.speed * timeInSec;
-
-			var hDist = Math.sin(_bearing/180 * Math.PI) * distToMove;
-			var vDist = Math.cos(_bearing/180 * Math.PI) * distToMove;
-
-			this.position = {
-				x: this.position.x + hDist,
-				y: this.position.y - vDist
-			};
 
 			//Send a message to all tick handlers with timeDelta
 			for (var i = 0, len = _tickCallbacks.length; i < len; i++) {
