@@ -1,11 +1,12 @@
 define([],
 function() {
-	//var reverseTurn = "void main() {\n\tint time;\n\tint lastTime;\n\tdouble distance;\n\t\n\tRobot.setTurnSpeed(0);\n\tRobot.setSpeed(5);\n\t\n\twhile (true) {\n\t\tdistance = Robot.getFrontDistance();\n\t\t\n\t\tif (distance \x3C 20) {\n\t\t\treverseAndTurn();\n\t\t}\n\t}\n}\n\nvoid reverseAndTurn() {\n\tint lastTime = getTime();\n\tint time;\n\t\x2F\x2FReverse for 2 seconds, turn right 90 degrees\n\t\n\tRobot.setSpeed(-5);\n\ttime = getTime();\n\twhile (time - lastTime \x3C 2000) {\n\t\ttime = getTime();\n\t}\n\t\n\tRobot.setSpeed(0);\n\tRobot.setTurnSpeed(15); \x2F\x2F15 degrees per second\n\t\x2F\x2Fwe need to turn for 6 seconds\n\t\n\tlastTime = getTime();\n\ttime = getTime();\n\twhile (time - lastTime \x3C 6000) {\n\t\ttime = getTime();\n\t}\n\t\n\tRobot.setTurnSpeed(0);\n\tRobot.setSpeed(5);\n}";
-	
+	var reverseSample="\x2F*\n * Sample program that sends the robot moving forward at a rate of\n * 1 ft\x2Fs. If the robot comes within 5 feet of a wall, it will back\n * up for 2 seconds, turn at a random speed for a random amount of\n * time, then continue moving forward\n *\x2F\n \n\n\x2F\x2FThe initial speed of the robot\ndouble initialSpeed = 1;\n \n\x2F\x2FThe main() method is required. This is the first function to run\nvoid main() {\n    \x2F\x2FSet the initial robot speed\n    Robot.drive(initialSpeed, initialSpeed); \x2F\x2FSet the left and right motors to 1 foot\x2Fs\n    \n    \x2F\x2FLoop forever\n    while (true) {\n        \x2F\x2FAccess the rangeFinder sensor and obtain its value\n        if (Robot.rangeFinder.getValue() \x3C 5) {\n            backupAndTurn();\n            Robot.drive(initialSpeed, initialSpeed);\n        }\n    }\n}\n\nvoid backupAndTurn() {\n    \x2F\x2FGet a random turn speed\n    double turnSpeed = Math.random();\n    \n    \x2F\x2FGet a random turn duration in seconds\n    double turnDuration = Math.randomInt(2, 6);\n    turnDuration *= 1000; \x2F\x2Fconvert to milliseconds\n    \n    \x2F\x2FGet the current time (in ms)\n    int lastTime = getTime();\n    while (getTime() - lastTime \x3C 2000) {\n        Robot.drive(-1, -1);\n    }\n    \n    \x2F\x2Fnow do the turn\n    lastTime = getTime();\n    while (getTime() - lastTime \x3C turnDuration) {\n        Robot.drive(turnSpeed, -turnSpeed);\n    }\n}";
 	return {
 		sampleList: [
-			
-			
+			{
+                title: 'Reverse and Turn',
+                code: reverseSample
+            }
 		]
 	};
 });
