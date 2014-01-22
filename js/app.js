@@ -1,8 +1,8 @@
-define(['jquery', 'underscore',
+define(['jquery', 'jqxwidgets', 'underscore',
     'robot', 'field', 'fieldobstacle',
     'sensors/rangefinder', 'sensors/gyro',
-    'simulation', 'ast/parser', 'samples', 'jqxwidgets'],
-function($, _, Robot, Field, FieldObstacle,
+    'simulation', 'ast/parser', 'samples'],
+function($, jqxWidgets, _, Robot, Field, FieldObstacle,
     RangeFinder, Gyro,
     Simulation, Parser, Samples) {
 
@@ -151,9 +151,15 @@ function($, _, Robot, Field, FieldObstacle,
             }, 100));
 
             //Code Editor
+            //Trigger the extension
+            ace.require('ace/ext/language_tools');
             var editor = ace.edit("editorArea");
             //editor.setTheme("ace/theme/monokai");
             editor.getSession().setMode("ace/mode/c_cpp");
+            editor.setOptions({
+                enableBasicAutocompletion: true,
+                enableSnippets: true,
+            });
 
             //Load any samples
             var sampleList = document.getElementById('cboSamples');
