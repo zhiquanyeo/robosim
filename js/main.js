@@ -19,7 +19,8 @@ require.config({
 			'exports': 'Backbone'
 		},
 		'jqxwidgets': ['jquery'],
-	}
+	},
+	'waitSeconds': 200,
 });
 
 //Main App

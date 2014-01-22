@@ -1,8 +1,8 @@
-define(['jquery', 'jqxwidgets', 'underscore',
+define(['jquery', 'underscore',
     'robot', 'field', 'fieldobstacle',
     'sensors/rangefinder', 'sensors/gyro',
-    'simulation', 'ast/parser', 'samples'],
-function($, jqxWidgets, _, Robot, Field, FieldObstacle,
+    'simulation', 'ast/parser', 'samples', 'jqxwidgets'],
+function($, _, Robot, Field, FieldObstacle,
     RangeFinder, Gyro,
     Simulation, Parser, Samples) {
 
