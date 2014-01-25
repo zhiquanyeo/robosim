@@ -152,14 +152,40 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
 
             //Code Editor
             //Trigger the extension
-            ace.require('ace/ext/language_tools');
+            var langTools = ace.require('ace/ext/language_tools');
             var editor = ace.edit("editorArea");
             //editor.setTheme("ace/theme/monokai");
             editor.getSession().setMode("ace/mode/c_cpp");
+
+            //set up keybindings for saving
+            editor.commands.addCommand({
+                name: 'save',
+                bindKey: {win: 'Ctrl+S', mac: 'Command-S'},
+                exec: function(editor) {
+                    console.log('save triggered');
+                },
+                readOnly: true
+            });
+
             editor.setOptions({
                 enableBasicAutocompletion: true,
-                enableSnippets: true,
             });
+
+            var testCompleter = {
+                getCompletions: function(editor, session, pos, prefix, callback) {
+                    console.log('getCompletions called: prefix : ', prefix);
+                    //apparently, once you have the DOT, prefix goes to null..
+                    console.log('pos: ', pos);
+                    callback(null, [{
+                        name: 'zomg1',
+                        value: 'zomg1value',
+                        score: 1,
+                        meta: 'Robot!'
+                    }]);
+                }
+            }
+
+            langTools.addCompleter(testCompleter);
 
             //Load any samples
             var sampleList = document.getElementById('cboSamples');
