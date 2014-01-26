@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <title>Robosim by zhiquanyeo</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Robosim</h1>
+        <h2></h2>
+
+        <section id="downloads">
+          <a href="https://github.com/zhiquanyeo/robosim/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/zhiquanyeo/robosim/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/zhiquanyeo/robosim" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a name="robosim" class="anchor" href="#robosim"><span class="octicon octicon-link"></span></a>robosim</h1>
+
+<p>RoboSim is a virtual robot that can be controlled via a C-like programming language. It is meant as an interactive way of teaching students basic programming concepts. Specifically, this was developed as a side project to teach students who are involved in the FIRST Robotics competition.</p>
+
+<h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>The robot in RoboSim is controlled by a user defined program that is entered in the code editor pane. The entire simulation consists of the visual representation of the field and robot, an interpreter and compiler which converts the source code into something vaguely resembling assembly, and a virtual processor for the robot which executes the assembly program.</p>
+
+<p>The system supports general programs as well (meaning that they don't always have to control the robot). The only thing that is necessary is a main function, which is the starting point for all programs.</p>
+
+<p>That is, the simplest legal program in RoboSim is:</p>
+
+<pre>
+void main() {
+    
+}
+</pre>
+
+<p>If the compiler does not find a main function, it'll throw a fit, uh, an error, which will be indicated in the code editor view (and in the Compiler Output tab).</p>
+
+<h2>
+<a name="the-language" class="anchor" href="#the-language"><span class="octicon octicon-link"></span></a>The Language</h2>
+
+<p>The language used to program in RoboSim is similar to C, with some limitations.</p>
+
+<ul>
+<li>No array support (yet)</li>
+<li>No variable declarations in block statements (and by extension, loops)</li>
+<li>No empty loop bodies</li>
+<li>Various other parts that I got too lazy to implement</li>
+</ul><p>The variable types available in RoboSim are</p>
+
+<ul>
+<li>int</li>
+<li>double</li>
+<li>char</li>
+<li>string</li>
+<li>bool</li>
+</ul><p>Declaring a variable is similar to C. If you want to declare a global, declare it outside of any function scope:</p>
+
+<pre>
+int a = 5;
+
+void main() {
+    ...
+}
+</pre>
+
+<p>The global variable will then be accessible anywhere in your program. Local variables can be declared within a function, and will only be accessible by that function.</p>
+
+<pre>
+void main() {
+    int noOneElseCanSeeThis = 5;
+}
+</pre>
+
+<p>Function return types can be any one of the 5 supported types, or 'void'.</p>
+
+<p>Loops are exactly the same as in C, and RoboSim supports do...while, while, and for loops.</p>
+
+<h2>
+<a name="robosim-specific-functions-and-libraries" class="anchor" href="#robosim-specific-functions-and-libraries"><span class="octicon octicon-link"></span></a>RoboSim Specific Functions and Libraries</h2>
+
+<p>RoboSim includes several "linked" libraries that allow common tasks to be done.</p>
+
+<p>The <em>Simulation</em> library (which has no namespace), contains the following functions:</p>
+
+<ul>
+<li>print(string message) : Prints output to the simulation console</li>
+</ul><p>The <em>Core</em> library (which has no namespace), contains:</p>
+
+<ul>
+<li>getTime() : Returns the number of milliseconds that have elapsed since midnight, Jan 1, 1970</li>
+</ul><p>The <em>Math</em> library (namespace Math), contains:</p>
+
+<ul>
+<li>random() : Returns a random number between 0 and 1</li>
+<li>randomInt(int low, int high) : Returns a random integer between <em>low</em> and <em>high</em> (inclusive)</li>
+<li>abs(int number) : Returns absolute value of <em>number</em>
+</li>
+<li>cos(double x) : Returns cosine of angle passed in (in radians)</li>
+<li>sin(double x) : Returns sine of angle passed in (in radians)</li>
+<li>tan(double x) : Returns tangent of angle passed in (in radians)</li>
+<li>max(double x1, double x2) : Returns the higher of <em>x1</em> and <em>x2</em>
+</li>
+<li>min(double x1, double x2) : Returns the lower of <em>x1</em> and <em>x2</em>
+</li>
+<li>floor(double x) : Returns the largest integer that is less than or equal to <em>x</em>
+</li>
+<li>ceil(double x) : Returns the smallest integer that is greater than or equal to <em>x</em>
+</li>
+<li>sqrt(double x) : Returns the square root of <em>x</em>
+</li>
+</ul><p>The <em>Robot</em> namespace is a special one, and contains functions needed to control the virtual robot. There are 2 built in functions to the Robot object:</p>
+
+<ul>
+<li>drive(double leftSpeed, double rightSpeed) : Drive the robot with the provided speeds. The robot uses differential steering. See examples further down on how to use this</li>
+<li>networkTable.putValue(string key, string value) : Updates the network table database with the corresponding key/value pair. Uses of this include setting up a "dashboard" to constantly monitor robot variables without flooding the console</li>
+</ul><p>Other functions supported by the <em>Robot</em> object depend on the type of sensors loaded on the robot (as specified in 'Environment Setup'). By default, there are 2 sensors, loaded, a Range Finder named <em>rangeFinder</em> and a Gyro named <em>gyro</em>. All sensors have 1 method, getValue() which returns some value, depending on the sensor type.</p>
+
+<p>Sensors can also be mounted on various parts of the chassis, and may return different values, depending on where they are mounted (mostly true for rangefinders)</p>
+
+<p>Example:</p>
+
+<pre>
+//Get the current reading of the gyro (degrees per second)
+double turnRate = Robot.gyro.getValue();
+//                       ^ the name of the sensor
+
+//Get the current rangefinder reading 
+double distanceToFront = Robot.rangeFinder.getValue();
+</pre>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
