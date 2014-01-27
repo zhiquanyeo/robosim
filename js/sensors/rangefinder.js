@@ -2,7 +2,7 @@ define([],
 function() {
 	/*
 	All sensors MUST implement the following interface
-	
+
 	attachToRobot(robot)
 	configure(<json object>) - configure the sensor (config details depend on sensor)
 	getValue() - return a number representing whatever value the sensor is reporting
@@ -24,17 +24,51 @@ function() {
 
 		var _visualElem = document.createElement('div');
 		_visualElem.classList.add('sim-sensor-line');
+		_visualElem.style.webkitTransformOrigin = "bottom";
 
 		var _showVisual = false;
 
 		var _lastDistance = 0;
 
+		this._redraw = function() {
+			if(_mountPoint===undefined || !_robot) {
+				console.warn('Sensor not configured.');
+				return;
+			}
+			var width = _robot.domElement.clientWidth;
+			var height = _robot.domElement.clientHeight;
+			var xCord = 0;
+			var yCord = height;
+			var rotation = 0;
+
+			if (_mountPoint == _robot.SensorMountPoint.RIGHT) {
+				xCord += width;
+				yCord -= height/2;
+				rotation = 90;
+			}
+			else if (_mountPoint == _robot.SensorMountPoint.BACK) {
+				xCord += width/2;
+				yCord -= height;
+				rotation = 180;
+			}
+			else if (_mountPoint == _robot.SensorMountPoint.LEFT) {
+				yCord -= height/2;
+				rotation = -90;
+			} else {
+				xCord += width/2;
+			}
+
+			_visualElem.style.bottom = yCord + 'px';
+			_visualElem.style.left = xCord + 'px';
+			_visualElem.style.webkitTransform = "rotate("+rotation+"deg)";
+		}
 		//Redraw visuals
 		this.forceRedraw = function () {
-			if (_robot && _showVisual) {
-				_visualElem.style.bottom = (_robot.domElement.clientHeight / 2) + 'px';
-				_visualElem.style.left = (_robot.domElement.clientWidth / 2) + 'px';
+			if(!_robot && !_showVisual) {
+				return;
 			}
+			this._redraw();
+
 		};
 
 		//Interface requirements
@@ -42,8 +76,7 @@ function() {
 			_robot = robot;
 
 			_robot.domElement.appendChild(_visualElem);
-			_visualElem.style.bottom = (_robot.domElement.clientHeight / 2) + 'px';
-			_visualElem.style.left = (_robot.domElement.clientWidth / 2) + 'px';
+			this._redraw();
 		};
 
 		this.configure = function (config) {
@@ -76,22 +109,36 @@ function() {
 				return parseFloat('NaN');
 			}
 
+			var pos = _robot.position;
+			var size = _robot.size;
+			var xCord = 0;
+			var yCord = 0;
+			var bearingRad = _robot.bearing/ 180 * Math.PI;
 			var angleToUse = _robot.bearing;
 			if (_mountPoint == _robot.SensorMountPoint.RIGHT) {
 				angleToUse += 90;
+				xCord += size.width;
+				yCord += size.height/2;
 			}
 			else if (_mountPoint == _robot.SensorMountPoint.BACK) {
 				angleToUse += 180;
+				xCord += size.width/2;
+				yCord -= size.height;
 			}
 			else if (_mountPoint == _robot.SensorMountPoint.LEFT) {
 				angleToUse += 270;
+				yCord -= size.height/2;
+			} else {
+				xCord += size.width/2;
 			}
 
 			if (angleToUse >= 360) {
 				angleToUse -= 360;
 			}
 
-			var pos = _robot.position;
+			//rotate position around bearing
+			pos.x += xCord * Math.cos(bearingRad) - yCord*Math.sin(bearingRad);
+			pos.y += xCord * Math.sin(bearingRad) + yCord*Math.cos(bearingRad);
 
 			var angleRad;
 			var offset;
@@ -156,9 +203,10 @@ function() {
 			}
 
 			if (distance) {
-				if (_showVisual)
+				if (_showVisual) {
 					_visualElem.style.height = _field.logicalToPixelOffset(distance) + 'px';
-				
+				}
+
 				_lastDistance = distance;
 			}
 			return distance;

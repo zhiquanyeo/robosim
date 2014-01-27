@@ -14,16 +14,16 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
     function _generateSensorLabel(sensorEntry) {
         var positionString;
         switch (sensorEntry.position) {
-            case Robot.SensorMountPoint.FRONT: 
+            case Robot.SensorMountPoint.FRONT:
                 positionString = 'FRONT';
                 break;
-            case Robot.SensorMountPoint.BACK: 
+            case Robot.SensorMountPoint.BACK:
                 positionString = 'BACK';
                 break;
-            case Robot.SensorMountPoint.RIGHT: 
+            case Robot.SensorMountPoint.RIGHT:
                 positionString = 'RIGHT';
                 break;
-            case Robot.SensorMountPoint.LEFT: 
+            case Robot.SensorMountPoint.LEFT:
                 positionString = 'LEFT';
                 break;
             default:
@@ -117,23 +117,23 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             txtFieldWidth.value = fieldSize.width;
             txtFieldHeight.value = fieldSize.height;
             //End UI Init
-            
+
 
             var isRunning = false;
             var timerToken;
 
             var errorLine = null;
             var EditorRange = ace.require('ace/range').Range;
-            
+
             var robot = new Robot({width: 2, height: 2});
-            
+
             _resetRobot();
-            
-            
+
+
             var theField = new Field(document.getElementById('playingField'), fieldSize);
 
             //==== Add some obstacles ===
-            var obstacle1 = new FieldObstacle({x: 75, y: 50}, 
+            var obstacle1 = new FieldObstacle({x: 75, y: 50},
                 {width: 5, height: 10}, 0, FieldObstacle.ObstacleColor.RED);
 
             //theField.addItem(obstacle1, theField.FieldItemType.OBSTACLE);
@@ -143,7 +143,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             robot.addEventHandler('collision', function() {
                 console.log('Robot had a collision!');
             });
-            
+
             //Resize event handler
             window.addEventListener('resize', _.debounce(function() {
                 //force a reset of the dimensions
@@ -194,7 +194,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             $('#outputTabs').jqxTabs({width: '100%', height: '100%', position: 'top'});
 
             $('#sensorList').jqxListBox({source: sensors, width: '100%', height: 200});
-            
+
 
             $('#addSensorPanel').jqxExpander({width: '100%', expanded: false});
 
@@ -301,7 +301,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                     $("#networkTable").jqxDataTable('updateBoundData');
                     simulation.start();
                     //switch to the console tab
-                    $('#outputTabs').jqxTabs('select', 1); 
+                    $('#outputTabs').jqxTabs('select', 1);
 
                 }
             });
@@ -309,7 +309,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             clearOutputBtn.addEventListener('click', function() {
                 outputList.innerHTML = "";
             })
-            
+
             var loaderArea = document.getElementById('loader');
             compileBtn.addEventListener('click', function() {
                 editor.getSession().clearAnnotations();
@@ -319,7 +319,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                 compilerOutput.innerHTML = '';
 
                 //switch compiler to compiler tab
-                $('#outputTabs').jqxTabs('select', 0); 
+                $('#outputTabs').jqxTabs('select', 0);
 
                 printOutput("COMPILE", "Beginning Compilation...");
 
@@ -331,7 +331,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
                     try {
                         _resetRobot();
                         var result = Parser.parse(editor.getSession().getValue());
-                        
+
                         simulation.loadProgramAST(result);
                         startStopBtn.disabled = false;
                         loaderArea.classList.remove('loading');
@@ -380,7 +380,7 @@ function($, jqxWidgets, _, Robot, Field, FieldObstacle,
             btnAddSensor.addEventListener('click', function() {
                 var selSensorType = cboSensorType.options.item(cboSensorType.selectedIndex);
                 var selSensorPosition = cboSensorPosition.options.item(cboSensorPosition.selectedIndex);
-                
+
                 var sensorName = txtSensorName.value.trim();
                 if (sensorName.length === 0) {
                     alert('Sensor name cannot be empty');
