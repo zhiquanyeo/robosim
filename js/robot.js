@@ -92,7 +92,7 @@ function () {
 	function _redraw(elem, visualPositionInfo) {
 		var top = (visualPositionInfo.y - (visualPositionInfo.height / 2)) + 'px';
 		var left = (visualPositionInfo.x - (visualPositionInfo.width / 2)) + 'px';
-		
+
 		elem.style.webkitTransform = "translate(" + left + ", " + top + ") rotate(" + visualPositionInfo.bearing + "deg)";
 
 		elem.style.width = visualPositionInfo.width + 'px';
@@ -105,7 +105,7 @@ function () {
 		var left = (positionInfo.x) + 'px';
 
 		elem.style.webkitTransform = "translate(" + left + ", " + top + ")";
-		
+
 		elem.style.width = positionInfo.width + 'px';
 		elem.style.height = positionInfo.height + 'px';
 	}
@@ -144,7 +144,7 @@ function () {
 		var _rightSpeed = 0;
 
 		var _bearing = 0; //in degrees
-		
+
 
 		//Sensors need to provide correct interface
 		var _sensors = [];
@@ -162,7 +162,7 @@ function () {
 
 		Object.defineProperty(this, 'position', {
 			get: function () {
-				return _position;
+				return {x:_position.x, y:_position.y};
 			},
 			set: function (pos) {
 				_position = pos;
@@ -337,7 +337,7 @@ function () {
 		this.removeAllSensors = function() {
 			_sensors.length = 0;
 		}
-		
+
 		//Field related functionality
 		this.registerWithField = function (field) {
 			_playingField = field;
@@ -403,7 +403,7 @@ function () {
 		}.bind(this);
 
 		//For use with sensors that are time based (gyro etc)
-		//This allows them to register themselves with the robot Tick, 
+		//This allows them to register themselves with the robot Tick,
 		//so they can update themselves
 		this.registerWithTick = function (callback) {
 			_tickCallbacks.push(callback);
@@ -420,11 +420,11 @@ function () {
 				//calculate the angle
 				var theta = theta0 - ((minusFactor * timeInSec) / _size.width) ;
 				returnObj.bearing = theta / Math.PI * 180 + 90;
-				
+
 				returnObj.position = {
-					x: prevPos.x - ((_size.width * plusFactor) / (2 * minusFactor)) 
+					x: prevPos.x - ((_size.width * plusFactor) / (2 * minusFactor))
 						* ( Math.sin(theta) - Math.sin(theta0) ),
-					y:  prevPos.y + ((_size.width * plusFactor) / (2 * minusFactor)) 
+					y:  prevPos.y + ((_size.width * plusFactor) / (2 * minusFactor))
 						* ( Math.cos(theta) - Math.cos(theta0) )
 				}
 			}
@@ -445,7 +445,7 @@ function () {
 			//timeDelta is how much time has elapsed between calls to tick (in ms)
 			var timeInSec = timeDelta / 1000;
 
-			var newPos = _calculateNewPosition(this.position, _bearing, 
+			var newPos = _calculateNewPosition(this.position, _bearing,
 							_leftSpeed, _rightSpeed, timeInSec);
 			newBearing = newPos.bearing;
 			if (newBearing >= 360) {
