@@ -7,6 +7,19 @@ function() {
 	configure(<json>) - configure the sensor (config details depend on sensor)
 	getValue() - return a number representing the sensor value
 	getDescription() - return a description of the sensor
+	
+	additionalMethods - an object of the form:
+	{
+		name: functionName,
+		retType: string,
+		parameters: [
+			{
+				varType: string,
+				name: string
+			}
+		],
+		implementation: <function>
+	}
 	*/
 
 	function Gyro() {
@@ -21,6 +34,28 @@ function() {
 		var _currRate = 0;
 
 		var _hasRegisteredWithTick = false;
+
+		var _currentAngle = 0;
+
+		//register the additional methods this sensor provides
+		this.additionalMethods = [
+			{
+				name: 'reset',
+				retType: 'void',
+				parameters: [],
+				implementation: function() {
+					_currentAngle = 0;
+				}
+			},
+			{
+				name: 'getAngle',
+				retType: 'double',
+				parameters: [],
+				implementation: function() {
+					return _currentAngle;
+				}
+			}
+		];
 
 		//=== Interface Requirements
 		this.attachToRobot = function (robot) {
@@ -50,6 +85,12 @@ function() {
 						var turnDelta = currBearing - _lastBearing;
 						var degPerSecond = turnDelta / timeDelta;
 						_lastBearing = _robot.bearing;
+
+						_currentAngle += turnDelta;
+						if (_currentAngle < 0) 
+							_currentAngle += 360;
+						if (_currentAngle >= 360)
+							_currentAngle -= 360;
 
 						_currRate = degPerSecond;
 					});

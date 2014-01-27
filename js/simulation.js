@@ -45,6 +45,7 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 			}
 
 			if (realSensor) {
+				sensor.realSensor = realSensor;
 				robot.addSensor(realSensor, sensor.position);
 				sensorImpls[sensor.name] = generateSensorImp(i);
 			}
@@ -134,6 +135,22 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				parameters: [],
 				implementation: sensorImpls[sensorName]
 			});
+		}
+
+		//Any additional sensor implementations
+		for (var i = 0, len = sensors.length; i < len; i++) {
+			var sensor = sensors[i];
+			if (sensor.realSensor && sensor.realSensor.additionalMethods) {
+				for (var j = 0; j < sensor.realSensor.additionalMethods.length; j++) {
+					var addlMethod = sensor.realSensor.additionalMethods[j];
+					sensorLibs.push({
+						name: 'Robot~' + sensor.name + '~' + addlMethod.name,
+						retType: addlMethod.retType,
+						parameters: addlMethod.parameters,
+						implementation: addlMethod.implementation
+					});
+				}
+			}
 		}
 
 		//Link in libraries
@@ -234,6 +251,7 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				}
 
 				if (realSensor) {
+					sensor.realSensor = realSensor;
 					robot.addSensor(realSensor, sensor.position);
 					sensorImpls[sensor.name] = generateSensorImp(i);
 				}
@@ -246,6 +264,22 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 					parameters: [],
 					implementation: sensorImpls[sensorName]
 				});
+			}
+
+			//Any additional sensor implementations
+			for (var i = 0, len = sensors.length; i < len; i++) {
+				var sensor = sensors[i];
+				if (sensor.realSensor && sensor.realSensor.additionalMethods) {
+					for (var j = 0; j < sensor.realSensor.additionalMethods.length; j++) {
+						var addlMethod = sensor.realSensor.additionalMethods[j];
+						sensorLibs.push({
+							name: 'Robot~' + sensor.name + '~' + addlMethod.name,
+							retType: addlMethod.retType,
+							parameters: addlMethod.parameters,
+							implementation: addlMethod.implementation
+						});
+					}
+				}
 			}
 		};
 
