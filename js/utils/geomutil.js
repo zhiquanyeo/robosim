@@ -88,9 +88,82 @@ function() {
 		return boundingBox;
 	}
 
+	//rectInfo is an object with position, size, angle
+	function _rectToPoints(rectInfo) {
+		var points;
+		var rectPoints = [
+			{
+				x: rectInfo.position.x - rectInfo.width / 2,
+				y: rectInfo.position.y - rectInfo.height / 2
+			},
+			{
+				x: rectInfo.position.x + rectInfo.width / 2,
+				y: rectInfo.position.y - rectInfo.height / 2
+			},
+			{
+				x: rectInfo.position.x - rectInfo.width / 2,
+				y: rectInfo.position.y + rectInfo.height / 2
+			},
+			{
+				x: rectInfo.position.x + rectInfo.width / 2,
+				y: rectInfo.position.y + rectInfo.height / 2
+			}
+		];
+
+		var angleRad = rectInfo.angle / 180 * Math.PI;
+
+		points = rectPoints.map(function(point) {
+			return _translatePoint(point, rectInfo.position, angleRad);
+		});
+
+		return points;
+	}
+
+	//Intersection between 2 lines, where a1, a2 are points on line a, and b1, b2 are points on line b
+	function _intersectLineLine (a1, a2, b1, b2) {
+		var result = {};
+		var ua_t = (b2.x - b1.x) * (a1.y - b1.y) - (b2.y - b1.y) * (a1.x - b1.x);
+		var ub_t = (a2.x - a1.x) * (a1.y - b1.y) - (a2.y - a1.y) * (a1.x - b1.x);
+		var u_b = (b2.y - b1.y) * (a2.x - a1.x) - (b2.x - b1.x) * (a2.y - a1.y);
+
+		if (u_b != 0) {
+			var ua = ua_t / u_b;
+			var ub = ub_t / u_b;
+			if (0 <= ua && ua <= 1 && 0 <= ub && ub <=1) {
+				result.points = [];
+				result.points.push({
+					x: a1.x + ua * (a2.x - a1.x),
+					y: a1.y + ua * (a2.y - a1.y)
+				});
+			}
+		}
+
+		return result;
+	}
+
+	//Intersection between a line and a polygon (collection of points)
+	function _intersectLinePoly(a1, a2, points) {
+		var result = {};
+		var length = points.length;
+		for (var i = 0; i < length; i++) {
+			var b1 = points[i];
+			var b2 = points[(i + 1) % length];
+			var intersection = _intersectLineLine(a1, a2, b1, b2);
+			if (intersection.points) {
+				result.points = [];
+				result.points.concat(intersection.points);
+			}
+		}
+
+		return result;
+	}
+
 	return {
 		translatePoint: _translatePoint,
 		findMinMaxPoints: _findMinMaxPoints,
 		getBoundingBox: _getBoundingBox,
+		rectToPoints: _rectToPoints,
+		intersectLineLine: _intersectLineLine,
+		intersectLinePoly: _intersectLinePoly,
 	}
 });
