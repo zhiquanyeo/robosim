@@ -9,47 +9,22 @@ define(['ast/compiler', 'linklibs/core', 'linklibs/math',
 	'sensors/rangefinder', 'sensors/gyro'],
 function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 
-	function Simulation(field, robot, sensors, programAST) {
+	function Simulation(programAST) {
 
-		var _playingField = field;
-		var _robot = robot;
 		var _programAST = programAST;
 		var _program;
 
-		if (!field || !robot) {
-			console.error("Must specify Field and Robot!");
-			return;
-		}
+		// HACK ALERT
+		// For this demo, we really just have the one sensor
+		// the frontRangefinder
 
-		var sensorImpls = {};
-
-		function generateSensorImp(sensorIdx) {
-			function _sensorImpl() {
-				var sensor = _robot.getSensor(sensorIdx);
-				return sensor.getValue();
+		var sensorImpls = {
+			rangeFinder: function() {
+				// TODO Pick up the reading from the analog input and return it
+				return 0.5;
 			}
+		};
 
-			return _sensorImpl;
-		}
-
-		//==== Set up the sensors that we need ====
-		for (var i = 0, len = sensors.length; i < len; i++) {
-			var sensor = sensors[i];
-			//add the sensor to the robot
-			var realSensor;
-			if (sensor.type === 'RangeFinder') {
-				realSensor = new RangeFinder();
-			}
-			else if (sensor.type === 'Gyro') {
-				realSensor = new Gyro();
-			}
-
-			if (realSensor) {
-				sensor.realSensor = realSensor;
-				robot.addSensor(realSensor, sensor.position);
-				sensorImpls[sensor.name] = generateSensorImp(i);
-			}
-		}
 
 		//==== End sensor set up ====
 
@@ -76,16 +51,8 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 		}
 
 		function _robotSetSpeedImplementation(lSpeed, rSpeed) {
-			_robot.leftSpeed = lSpeed;
-			_robot.rightSpeed = rSpeed;
-		}
-
-
-		function _networkTableImplementation(varName, value) {
-			_fireEvent('networkTableValueUpdated', {
-				varName: varName,
-				value: value
-			});
+			// TODO This is where we signal the calling
+			console.log("Set Speed!");
 		}
 
 		var builtInFunctions = [
@@ -110,18 +77,7 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				},],
 				implementation: _robotSetSpeedImplementation
 			},
-			{
-				name: 'Robot~networkTable~putValue',
-				retType: 'void',
-				parameters: [{
-					varType: 'string',
-					name: 'varName'
-				}, {
-					varType: 'string',
-					name: 'value'
-				}],
-				implementation: _networkTableImplementation
-			}
+			
 		];
 
 		var sensorLibs = [];
@@ -135,22 +91,6 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				parameters: [],
 				implementation: sensorImpls[sensorName]
 			});
-		}
-
-		//Any additional sensor implementations
-		for (var i = 0, len = sensors.length; i < len; i++) {
-			var sensor = sensors[i];
-			if (sensor.realSensor && sensor.realSensor.additionalMethods) {
-				for (var j = 0; j < sensor.realSensor.additionalMethods.length; j++) {
-					var addlMethod = sensor.realSensor.additionalMethods[j];
-					sensorLibs.push({
-						name: 'Robot~' + sensor.name + '~' + addlMethod.name,
-						retType: addlMethod.retType,
-						parameters: addlMethod.parameters,
-						implementation: addlMethod.implementation
-					});
-				}
-			}
 		}
 
 		//Link in libraries
@@ -178,8 +118,6 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				return;
 			}
 
-			_robot.processTick(deltaTime);
-
 			_lastTime = currTime;
 		}
 
@@ -189,6 +127,8 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 				_timerToken = null;
 				_isRunning = false;
 				_fireEvent('runStateChanged', false);
+
+				// TODO Send STOP command to motors
 			}
 		}
 
@@ -231,56 +171,6 @@ function(Compiler, CoreLib, MathLib, RangeFinder, Gyro) {
 			}
 
 			handlers.push(callback);
-		};
-
-		this.updateRobotSensors = function(sensors) {
-			_robot.removeAllSensors();
-			sensorImpls = {};
-
-			sensorLibs = [];
-
-			for (var i = 0, len = sensors.length; i < len; i++) {
-				var sensor = sensors[i];
-				//add the sensor to the robot
-				var realSensor;
-				if (sensor.type === 'RangeFinder') {
-					realSensor = new RangeFinder();
-				}
-				else if (sensor.type === 'Gyro') {
-					realSensor = new Gyro();
-				}
-
-				if (realSensor) {
-					sensor.realSensor = realSensor;
-					robot.addSensor(realSensor, sensor.position);
-					sensorImpls[sensor.name] = generateSensorImp(i);
-				}
-			}
-
-			for (var sensorName in sensorImpls) {
-				sensorLibs.push({
-					name: 'Robot~' + sensorName + '~getValue',
-					retType: 'double',
-					parameters: [],
-					implementation: sensorImpls[sensorName]
-				});
-			}
-
-			//Any additional sensor implementations
-			for (var i = 0, len = sensors.length; i < len; i++) {
-				var sensor = sensors[i];
-				if (sensor.realSensor && sensor.realSensor.additionalMethods) {
-					for (var j = 0; j < sensor.realSensor.additionalMethods.length; j++) {
-						var addlMethod = sensor.realSensor.additionalMethods[j];
-						sensorLibs.push({
-							name: 'Robot~' + sensor.name + '~' + addlMethod.name,
-							retType: addlMethod.retType,
-							parameters: addlMethod.parameters,
-							implementation: addlMethod.implementation
-						});
-					}
-				}
-			}
 		};
 
 		function _fireEvent (event, data) {
